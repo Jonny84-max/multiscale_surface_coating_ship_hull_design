@@ -1,9 +1,10 @@
 import streamlit as st
 import numpy as np
+import pandas as pd
 import joblib
 import matplotlib.pyplot as plt
 
-# ================= LOAD MODEL (FIXED) =================
+# ================= LOAD MODEL =================
 data = joblib.load("model.pkl")
 model = data["model"]
 columns = data["columns"]
@@ -28,24 +29,24 @@ coating = st.sidebar.selectbox("Coating", ["Epoxy", "Vinyl", "PDMS", "Fluoro", "
 material_map = {"GFRP": 0, "CFRP": 1, "Hybrid": 2}
 coating_map = {"Epoxy": 0, "Vinyl": 1, "PDMS": 2, "Fluoro": 3, "Sol-gel": 4}
 
+# ================= FEATURE BUILDER (FIXED CORE) =================
+def build_input(v):
+    return np.array([[
+        riblet_height,
+        riblet_spacing,
+        lotus_intensity,
+        v,
+        temperature,
+        salinity,
+        time,
+        material_map[material],
+        coating_map[coating]
+    ]])
+
 # ================= PREDICTION =================
 if st.button("Run Simulation"):
 
-    # FIXED: ensures same feature order as training
-    input_dict = {
-        "riblet_height": riblet_height,
-        "riblet_spacing": riblet_spacing,
-        "lotus_intensity": lotus_intensity,
-        "velocity": velocity,
-        "temperature": temperature,
-        "salinity": salinity,
-        "time": time,
-        "material": material_map[material],
-        "coating": coating_map[coating]
-    }
-
-    X = np.array([[input_dict[col] for col in columns]])
-
+    X = build_input(velocity)
     pred = model.predict(X)[0]
 
     st.subheader("Performance Results")
@@ -87,8 +88,7 @@ vels = np.linspace(0.5, 12, 40)
 drag_curve = []
 
 for v in vels:
-    input_dict["velocity"] = v
-    X = np.array([[input_dict[col] for col in columns]])
+    X = build_input(v)
     drag_curve.append(model.predict(X)[0][0])
 
 fig3, ax3 = plt.subplots()
