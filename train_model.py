@@ -10,6 +10,7 @@ y = df[["drag_reduction", "biofouling", "hydrophobicity", "durability"]]
 model = RandomForestRegressor(n_estimators=150, random_state=42)
 model.fit(X, y)
 
-joblib.dump(model, "model.pkl")
+joblib.dump(model, "model.pkl", compress=5)
+
 
 print("Model trained")
