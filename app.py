@@ -70,7 +70,8 @@ hull_base = 1 - (Yg**2) / (1.5**2)
 hull_base = np.clip(hull_base, 0, 1)
 
 # ================= RIBLETS (LONGITUDINAL) =================
-riblet_surface = riblet_height * np.sin(25 * Xg) ** 2
+riblet_surface = riblet_height * np.sin(30 * (Xg - Xg.min()))
+riblet_surface = riblet_surface * (1 + 0 * Yg)
 
 # ================= LOTUS (HIERARCHICAL ROUGHNESS) =================
 micro = 0.05 * np.sin(10 * Xg) * np.sin(10 * Yg)
@@ -92,32 +93,23 @@ st.subheader("Interactive Hull Viewer (Rotate & Zoom)")
 fig_plotly = go.Figure()
 
 fig_plotly.add_trace(
-    go.Surface(
-        x=Xg,
-        y=Yg,
-        z=Z,
-        colorscale="Viridis",
-        showscale=True
-    )
+    go.Surface(x=Xg, y=Yg, z=Z, colorscale="Viridis")
 )
 
 fig_plotly.update_layout(
-    title="Biomimetic Hull (Fore–Aft Riblet Orientation)",
-    margin=dict(l=0, r=0, t=40, b=0),
     scene=dict(
-        xaxis_title="Fore–Aft (Length)",
-        yaxis_title="Beam",
+        xaxis_title="Fore → Aft",
+        yaxis_title="Port → Starboard",
         zaxis_title="Height",
         camera=dict(
-            eye=dict(x=2.5, y=0.1, z=1.2)
+            eye=dict(x=2.8, y=0.0, z=1.2)
         ),
         aspectmode="manual",
-        aspectratio=dict(x=3, y=1, z=0.5)
+        aspectratio=dict(x=3, y=1, z=0.6)
     )
 )
 
 st.plotly_chart(fig_plotly, use_container_width=True)
-
 
 # ================= FLOW FIELD =================
 st.subheader("Flow Field (CFD-style Approximation)")
