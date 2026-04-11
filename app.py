@@ -93,23 +93,26 @@ fig_plotly = go.Figure()
 
 fig_plotly.add_trace(
     go.Surface(
-        z=Z,
         x=Xg,
         y=Yg,
+        z=Z,
         colorscale="Viridis",
         showscale=True
     )
 )
 
 fig_plotly.update_layout(
-    title="Biomimetic Hull Surface (Interactive 3D)",
-    autosize=True,
+    title="Biomimetic Hull (Fore–Aft Riblet Orientation)",
     margin=dict(l=0, r=0, t=40, b=0),
     scene=dict(
-        xaxis_title="Length",
+        xaxis_title="Fore–Aft (Length)",
         yaxis_title="Beam",
-        zaxis_title="Surface Height",
-        aspectmode="auto"
+        zaxis_title="Height",
+        camera=dict(
+            eye=dict(x=2.5, y=0.1, z=1.2)
+        ),
+        aspectmode="manual",
+        aspectratio=dict(x=3, y=1, z=0.5)
     )
 )
 
