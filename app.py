@@ -3,7 +3,10 @@ import numpy as np
 import joblib
 import matplotlib.pyplot as plt
 
-model = joblib.load("model.pkl")
+# ================= LOAD MODEL (FIXED) =================
+data = joblib.load("model.pkl")
+model = data["model"]
+columns = data["columns"]
 
 st.title("Hybrid Biomimetic Hull Design System")
 
@@ -28,9 +31,20 @@ coating_map = {"Epoxy": 0, "Vinyl": 1, "PDMS": 2, "Fluoro": 3, "Sol-gel": 4}
 # ================= PREDICTION =================
 if st.button("Run Simulation"):
 
-    X = np.array([[riblet_height, riblet_spacing, lotus_intensity,
-                   velocity, temperature, salinity, time,
-                   material_map[material], coating_map[coating]]])
+    # FIXED: ensures same feature order as training
+    input_dict = {
+        "riblet_height": riblet_height,
+        "riblet_spacing": riblet_spacing,
+        "lotus_intensity": lotus_intensity,
+        "velocity": velocity,
+        "temperature": temperature,
+        "salinity": salinity,
+        "time": time,
+        "material": material_map[material],
+        "coating": coating_map[coating]
+    }
+
+    X = np.array([[input_dict[col] for col in columns]])
 
     pred = model.predict(X)[0]
 
@@ -73,31 +87,30 @@ vels = np.linspace(0.5, 12, 40)
 drag_curve = []
 
 for v in vels:
-    X = np.array([[riblet_height, riblet_spacing, lotus_intensity,
-                   v, temperature, salinity, time,
-                   material_map[material], coating_map[coating]]])
+    input_dict["velocity"] = v
+    X = np.array([[input_dict[col] for col in columns]])
     drag_curve.append(model.predict(X)[0][0])
 
-plt.figure()
-plt.plot(vels, drag_curve)
-st.pyplot(plt)
+fig3, ax3 = plt.subplots()
+ax3.plot(vels, drag_curve)
+st.pyplot(fig3)
 
-# ================= COMPARISON VIEW (NEW ADDITION) =================
+# ================= COMPARISON VIEW =================
 st.subheader("Surface Performance Comparison")
 
 labels = ["Smooth Hull", "Riblet Surface", "Lotus Surface", "Hybrid Biomimetic"]
 
 smooth = 40
-riblet = 65
-lotus = 60
+riblet_val = 65
+lotus_val = 60
 hybrid = pred[0] if 'pred' in locals() else 75
 
-values = [smooth, riblet, lotus, hybrid]
+values = [smooth, riblet_val, lotus_val, hybrid]
 
-plt.figure()
-plt.bar(labels, values)
-plt.ylabel("Performance Index")
-st.pyplot(plt)
+fig4, ax4 = plt.subplots()
+ax4.bar(labels, values)
+ax4.set_ylabel("Performance Index")
+st.pyplot(fig4)
 
 # ================= INSIGHT =================
 st.subheader("Engineering Insight")
