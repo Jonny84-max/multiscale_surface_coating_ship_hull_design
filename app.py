@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import joblib
 import matplotlib.pyplot as plt
+import pyvista as pv
 
 # ================= LOAD MODEL =================
 data = joblib.load("model.pkl")
@@ -51,42 +52,51 @@ if st.button("Run Simulation"):
     pred = model.predict(X)[0]
 
     st.subheader("Performance Results")
-
     st.metric("Drag Reduction", f"{pred[0]:.2f}")
     st.metric("Biofouling Risk", f"{pred[1]:.2f}")
     st.metric("Hydrophobicity", f"{pred[2]:.2f}")
     st.metric("Durability", f"{pred[3]:.2f}")
 
-# ================= SURFACE (REALISTIC HULL SHAPE) =================
-st.subheader("Surface Microstructure (Biomimetic Hull)")
+# ================= 3D CFD HULL (PYVISTA) =================
+st.subheader("3D Biomimetic Hull CFD Simulation")
 
-x = np.linspace(-3, 3, 140)
-y = np.linspace(-1.5, 1.5, 140)
+x = np.linspace(-3, 3, 80)
+y = np.linspace(-1.5, 1.5, 80)
 Xg, Yg = np.meshgrid(x, y)
 
-# hull geometry (curved structure)
-hull_base = 1 - (Yg**2) / (1.5**2)
+# hull base geometry (true curvature)
+hull_base = 1 - (Yg**2 / 1.5**2)
 hull_base = np.clip(hull_base, 0, 1)
 
-# biomimetic textures
-riblet_surface = riblet_height * np.sin(12 * Xg) * np.cos(3 * Yg)
-lotus_surface = lotus_intensity * np.random.normal(0, 0.02, Xg.shape)
+# riblet + lotus microstructure
+riblets = riblet_height * np.sin(15 * Xg) * np.cos(3 * Yg)
+lotus = lotus_intensity * np.random.normal(0, 0.02, Xg.shape)
 
-Z = hull_base + riblet_surface + lotus_surface
+Z = hull_base + riblets + lotus
 
-fig = plt.figure(figsize=(8, 5))
-ax = fig.add_subplot(111, projection='3d')
-ax.plot_surface(Xg, Yg, Z, cmap="viridis", edgecolor="none")
-ax.set_title("Biomimetic Hull Surface (Riblet + Lotus)")
-st.pyplot(fig)
+# CFD velocity field (reduced-order model)
+velocity_field = velocity / (1 + np.abs(Z))
 
-# ================= FLOW FIELD =================
+# Create PyVista mesh
+grid = pv.StructuredGrid(Xg, Yg, Z)
+grid["velocity"] = velocity_field.ravel(order="F")
+
+plotter = pv.Plotter(off_screen=True)
+plotter.add_mesh(grid, scalars="velocity", cmap="coolwarm")
+plotter.add_axes()
+plotter.view_isometric()
+plotter.show(screenshot="hull_cfd.png")
+
+st.image("hull_cfd.png", use_container_width=True)
+
+# ================= FLOW FIELD (STREAMLINES) =================
 st.subheader("Flow Field (CFD-style)")
 
-velocity_field = 1 / (1 + np.abs(Z))
+u = velocity * np.exp(-np.abs(Z))
+v = lotus_intensity * np.sin(Yg)
 
 fig2, ax2 = plt.subplots()
-ax2.contourf(Xg, Yg, velocity_field, levels=25)
+ax2.streamplot(Xg, Yg, u, v, density=1.2)
 st.pyplot(fig2)
 
 # ================= DRAG CURVE =================
