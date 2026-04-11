@@ -61,8 +61,9 @@ if st.button("Run Simulation"):
 # ================= 3D BIOMIMETIC HULL (MATPLOTLIB) =================
 st.subheader("3D Biomimetic Hull (Static View)")
 
-x = np.linspace(-3, 3, 140)
-y = np.linspace(-1.5, 1.5, 140)
+# Grid
+x = np.linspace(0, 5, 150)
+y = np.linspace(0, 5, 150)
 Xg, Yg = np.meshgrid(x, y)
 
 # base hull
@@ -70,8 +71,15 @@ hull_base = 1 - (Yg**2) / (1.5**2)
 hull_base = np.clip(hull_base, 0, 1)
 
 # ================= RIBLETS (LONGITUDINAL) =================
-riblet_surface = riblet_height * np.sin(30 * (Xg - Xg.min()))
-riblet_surface = riblet_surface * (1 + 0 * Yg)
+# periodic grooves aligned with flow (x-direction)
+riblet = riblet_height * np.sin((2 * np.pi / riblet_spacing) * Xg)
+
+# LOTUS STRUCTURE (STRUCTURED, NOT RANDOM)
+# -----------------------------
+# repeating micro-bumps
+lotus = lotus_intensity * (
+    np.cos(8 * Xg) * np.cos(8 * Yg)
+)
 
 # ================= LOTUS (HIERARCHICAL ROUGHNESS) =================
 micro = 0.05 * np.sin(10 * Xg) * np.sin(10 * Yg)
@@ -81,11 +89,14 @@ lotus_surface = lotus_intensity * (micro + nano)
 
 # FINAL SURFACE
 Z = hull_base + riblet_surface + 0.3 * lotus_surface
-
-fig = plt.figure(figsize=(7, 5))
+# Plot 3D surface
+fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
-ax.plot_surface(Xg, Yg, Z, cmap="viridis")
+ax.plot_surface(Xg, Yg, Z)
+
+ax.set_title("Hybrid Riblet + Lotus Microstructure")
 st.pyplot(fig)
+
 
 # ================= PRO MODE: INTERACTIVE 3D (PLOTLY) =================
 st.subheader("Interactive Hull Viewer (Rotate & Zoom)")
@@ -115,10 +126,28 @@ st.plotly_chart(fig_plotly, use_container_width=True)
 st.subheader("Flow Field (CFD-style Approximation)")
 
 velocity_field = 1 / (1 + np.abs(Z))
-
 fig2, ax2 = plt.subplots()
-ax2.contourf(Xg, Yg, velocity_field, levels=25)
+c = ax2.contourf(Xg, Yg, velocity_field, levels=25)
+plt.colorbar(c)
+
+ax2.set_title("Velocity Distribution Over Engineered Surface")
 st.pyplot(fig2)
+
+# ================= BIOFOULING INTERACTION =================
+st.subheader("🧫 Biofouling Attachment Zones")
+
+# organism scale (barnacle larvae ~0.2–1 mm)
+organism_size = 0.2  # mm threshold
+
+# zones where organisms can "fit"
+attachment_zone = np.abs(Z) < organism_size
+
+fig3, ax3 = plt.subplots()
+ax3.contourf(Xg, Yg, attachment_zone, levels=1)
+
+ax3.set_title("Potential Attachment Regions (White = Risk Zones)")
+st.pyplot(fig3)
+
 
 # ================= VECTOR FLOW (NEW CFD IMPROVEMENT) =================
 st.subheader("Flow Direction Field")
@@ -131,7 +160,7 @@ fig3, ax3 = plt.subplots()
 ax3.quiver(Xg[::step, ::step], Yg[::step, ::step],
            U[::step, ::step], V[::step, ::step])
 ax3.set_title("Flow Vectors over Hull Surface")
-st.pyplot(fig3)
+st.pyplot(fig4)
 
 # ================= DRAG CURVE =================
 st.subheader("Drag vs Velocity")
@@ -147,7 +176,7 @@ fig4, ax4 = plt.subplots()
 ax4.plot(vels, drag_curve)
 ax4.set_xlabel("Velocity")
 ax4.set_ylabel("Drag Reduction")
-st.pyplot(fig4)
+st.pyplot(fig5)
 
 # ================= COMPARISON =================
 st.subheader("Surface Performance Comparison")
@@ -163,7 +192,7 @@ values = [smooth, riblet_val, lotus_val, hybrid]
 
 fig5, ax5 = plt.subplots()
 ax5.bar(labels, values)
-st.pyplot(fig5)
+st.pyplot(fig6)
 
 # ================= INSIGHT =================
 st.subheader("Engineering Insight")
