@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import joblib
 import matplotlib.pyplot as plt
-import pyvista as pv
+import plotly.graph_objects as go
 
 # ================= LOAD MODEL =================
 data = joblib.load("model.pkl")
@@ -52,52 +52,73 @@ if st.button("Run Simulation"):
     pred = model.predict(X)[0]
 
     st.subheader("Performance Results")
+
     st.metric("Drag Reduction", f"{pred[0]:.2f}")
     st.metric("Biofouling Risk", f"{pred[1]:.2f}")
     st.metric("Hydrophobicity", f"{pred[2]:.2f}")
     st.metric("Durability", f"{pred[3]:.2f}")
 
-# ================= 3D CFD HULL (PYVISTA) =================
-st.subheader("3D Biomimetic Hull CFD Simulation")
+# ================= 3D BIOMIMETIC HULL (MATPLOTLIB) =================
+st.subheader("3D Biomimetic Hull (Static View)")
 
-x = np.linspace(-3, 3, 80)
-y = np.linspace(-1.5, 1.5, 80)
+x = np.linspace(-3, 3, 120)
+y = np.linspace(-1.5, 1.5, 120)
 Xg, Yg = np.meshgrid(x, y)
 
-# hull base geometry (true curvature)
-hull_base = 1 - (Yg**2 / 1.5**2)
+hull_base = 1 - (Yg**2) / (1.5**2)
 hull_base = np.clip(hull_base, 0, 1)
 
-# riblet + lotus microstructure
-riblets = riblet_height * np.sin(15 * Xg) * np.cos(3 * Yg)
-lotus = lotus_intensity * np.random.normal(0, 0.02, Xg.shape)
+riblet_surface = riblet_height * np.sin(12 * Xg) * np.cos(3 * Yg)
+lotus_surface = lotus_intensity * np.random.normal(0, 0.02, Xg.shape)
 
-Z = hull_base + riblets + lotus
+Z = hull_base + riblet_surface + lotus_surface
 
-# CFD velocity field (reduced-order model)
-velocity_field = velocity / (1 + np.abs(Z))
+fig = plt.figure(figsize=(7, 5))
+ax = fig.add_subplot(111, projection='3d')
+ax.plot_surface(Xg, Yg, Z, cmap="viridis")
+st.pyplot(fig)
 
-# Create PyVista mesh
-grid = pv.StructuredGrid(Xg, Yg, Z)
-grid["velocity"] = velocity_field.ravel(order="F")
+# ================= PRO MODE: INTERACTIVE 3D (PLOTLY) =================
+st.subheader("Interactive Hull Viewer (Rotate & Zoom)")
 
-plotter = pv.Plotter(off_screen=True)
-plotter.add_mesh(grid, scalars="velocity", cmap="coolwarm")
-plotter.add_axes()
-plotter.view_isometric()
-plotter.show(screenshot="hull_cfd.png")
+fig_plotly = go.Figure(
+    data=[
+        go.Surface(z=Z, x=Xg, y=Yg, colorscale="Viridis")
+    ]
+)
 
-st.image("hull_cfd.png", use_container_width=True)
+fig_plotly.update_layout(
+    margin=dict(l=0, r=0, t=30, b=0),
+    scene=dict(
+        xaxis_title="Length",
+        yaxis_title="Beam",
+        zaxis_title="Surface"
+    )
+)
 
-# ================= FLOW FIELD (STREAMLINES) =================
-st.subheader("Flow Field (CFD-style)")
+st.plotly_chart(fig_plotly, use_container_width=True)
 
-u = velocity * np.exp(-np.abs(Z))
-v = lotus_intensity * np.sin(Yg)
+# ================= FLOW FIELD =================
+st.subheader("Flow Field (CFD-style Approximation)")
+
+velocity_field = 1 / (1 + np.abs(Z))
 
 fig2, ax2 = plt.subplots()
-ax2.streamplot(Xg, Yg, u, v, density=1.2)
+ax2.contourf(Xg, Yg, velocity_field, levels=25)
 st.pyplot(fig2)
+
+# ================= VECTOR FLOW (NEW CFD IMPROVEMENT) =================
+st.subheader("Flow Direction Field")
+
+step = 8
+U = -np.gradient(Z, axis=1)
+V = -np.gradient(Z, axis=0)
+
+fig3, ax3 = plt.subplots()
+ax3.quiver(Xg[::step, ::step], Yg[::step, ::step],
+           U[::step, ::step], V[::step, ::step])
+ax3.set_title("Flow Vectors over Hull Surface")
+st.pyplot(fig3)
 
 # ================= DRAG CURVE =================
 st.subheader("Drag vs Velocity")
@@ -109,11 +130,11 @@ for v in vels:
     X = build_input(v)
     drag_curve.append(model.predict(X)[0][0])
 
-fig3, ax3 = plt.subplots()
-ax3.plot(vels, drag_curve)
-ax3.set_xlabel("Velocity")
-ax3.set_ylabel("Drag Reduction")
-st.pyplot(fig3)
+fig4, ax4 = plt.subplots()
+ax4.plot(vels, drag_curve)
+ax4.set_xlabel("Velocity")
+ax4.set_ylabel("Drag Reduction")
+st.pyplot(fig4)
 
 # ================= COMPARISON =================
 st.subheader("Surface Performance Comparison")
@@ -123,19 +144,18 @@ labels = ["Smooth Hull", "Riblet Surface", "Lotus Surface", "Hybrid Biomimetic"]
 smooth = 40
 riblet_val = 65
 lotus_val = 60
-hybrid = pred[0] if "pred" in locals() else 75
+hybrid = pred[0] if 'pred' in locals() else 75
 
 values = [smooth, riblet_val, lotus_val, hybrid]
 
-fig4, ax4 = plt.subplots()
-ax4.bar(labels, values)
-ax4.set_ylabel("Performance Index")
-st.pyplot(fig4)
+fig5, ax5 = plt.subplots()
+ax5.bar(labels, values)
+st.pyplot(fig5)
 
 # ================= INSIGHT =================
 st.subheader("Engineering Insight")
 
 st.write("""
-This system integrates riblet-based drag reduction, lotus-inspired hydrophobicity,
-and composite material selection to optimize hull performance under marine conditions.
+This system integrates riblet microstructures, lotus-inspired hydrophobicity,
+and composite material optimization for marine hull performance enhancement.
 """)
