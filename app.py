@@ -1,6 +1,5 @@
 import streamlit as st
 import numpy as np
-import pandas as pd
 import joblib
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
@@ -47,120 +46,91 @@ def build_input(v):
 
 # ================= PREDICTION =================
 if st.button("Run Simulation"):
-
     X = build_input(velocity)
     pred = model.predict(X)[0]
 
     st.subheader("Performance Results")
-
     st.metric("Drag Reduction", f"{pred[0]:.2f}")
     st.metric("Biofouling Risk", f"{pred[1]:.2f}")
     st.metric("Hydrophobicity", f"{pred[2]:.2f}")
     st.metric("Durability", f"{pred[3]:.2f}")
 
-# ================= 3D BIOMIMETIC HULL (MATPLOTLIB) =================
-st.subheader("3D Biomimetic Hull (Static View)")
-
-# Grid
+# ================= GRID =================
 x = np.linspace(0, 5, 150)
 y = np.linspace(0, 5, 150)
 Xg, Yg = np.meshgrid(x, y)
 
-# base hull
+# ================= HULL BASE =================
 hull_base = 1 - (Yg**2) / (1.5**2)
 hull_base = np.clip(hull_base, 0, 1)
 
-# ================= RIBLETS (LONGITUDINAL) =================
-# periodic grooves aligned with flow (x-direction)
-riblet_surface = riblet_height * np.sin((2 * np.pi / riblet_spacing) * Xg)
+# ================= RIBLETS =================
+riblet = riblet_height * np.sin((2 * np.pi / riblet_spacing) * Xg)
 
-# LOTUS STRUCTURE (STRUCTURED, NOT RANDOM)
-# -----------------------------
-# repeating micro-bumps
-lotus = lotus_intensity * (
-    np.cos(8 * Xg) * np.cos(8 * Yg)
-)
+# ================= LOTUS =================
+lotus = lotus_intensity * (np.cos(8 * Xg) * np.cos(8 * Yg))
 
-# ================= LOTUS (HIERARCHICAL ROUGHNESS) =================
-micro = 0.05 * np.sin(10 * Xg) * np.sin(10 * Yg)
-nano = 0.02 * np.random.normal(0, 1, Xg.shape)
+# ================= FINAL SURFACE =================
+Z = hull_base + riblet + 0.3 * lotus
 
-lotus_surface = lotus_intensity * (micro + nano)
+# ================= 3D SURFACE =================
+st.subheader("3D Biomimetic Hull Surface")
 
-# FINAL SURFACE
-Z = hull_base + riblet_surface + 0.3 * lotus_surface
-# Plot 3D surface
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 ax.plot_surface(Xg, Yg, Z)
-
-ax.set_title("Hybrid Riblet + Lotus Microstructure")
+ax.set_title("Riblet + Lotus Hybrid Surface")
 st.pyplot(fig)
 
+# ================= INTERACTIVE 3D =================
+st.subheader("Interactive 3D Viewer")
 
-# ================= PRO MODE: INTERACTIVE 3D (PLOTLY) =================
-st.subheader("Interactive Hull Viewer (Rotate & Zoom)")
-
-fig_plotly = go.Figure()
-
-fig_plotly.add_trace(
-    go.Surface(x=Xg, y=Yg, z=Z, colorscale="Viridis")
-)
+fig_plotly = go.Figure(data=[go.Surface(x=Xg, y=Yg, z=Z)])
 
 fig_plotly.update_layout(
     scene=dict(
-        xaxis_title="Fore → Aft",
-        yaxis_title="Port → Starboard",
-        zaxis_title="Height",
-        camera=dict(
-            eye=dict(x=0.0, y=2.8, z=0.0)
-        ),
-        aspectmode="manual",
-        aspectratio=dict(x=0.0, y=3, z=0.0)
+        xaxis_title="Flow Direction",
+        yaxis_title="Hull Width",
+        zaxis_title="Surface Height"
     )
 )
 
 st.plotly_chart(fig_plotly, use_container_width=True)
 
 # ================= FLOW FIELD =================
-st.subheader("Flow Field (CFD-style Approximation)")
+st.subheader("Velocity Field")
 
 velocity_field = 1 / (1 + np.abs(Z))
-fig2, ax2 = plt.subplots()
-c = ax2.contourf(Xg, Yg, velocity_field, levels=25)
-plt.colorbar(c)
 
-ax2.set_title("Velocity Distribution Over Engineered Surface")
-st.pyplot(fig2)
+fig_flow, ax_flow = plt.subplots()
+contour = ax_flow.contourf(Xg, Yg, velocity_field, levels=25)
+plt.colorbar(contour)
+ax_flow.set_title("Flow Distribution")
+st.pyplot(fig_flow)
 
-# ================= BIOFOULING INTERACTION =================
-st.subheader("🧫 Biofouling Attachment Zones")
+# ================= BIOFOULING =================
+st.subheader("Biofouling Attachment Zones")
 
-# organism scale (barnacle larvae ~0.2–1 mm)
-organism_size = 0.2  # mm threshold
-
-# zones where organisms can "fit"
+organism_size = 0.2
 attachment_zone = np.abs(Z) < organism_size
 
-fig3, ax3 = plt.subplots()
-ax3.contourf(Xg, Yg, attachment_zone, levels=1)
+fig_bio, ax_bio = plt.subplots()
+ax_bio.contourf(Xg, Yg, attachment_zone, levels=1)
+ax_bio.set_title("Attachment Risk Zones")
+st.pyplot(fig_bio)
 
-ax3.set_title("Potential Attachment Regions (White = Risk Zones)")
-st.pyplot(fig3)
-
-
-# ================= VECTOR FLOW (NEW CFD IMPROVEMENT) =================
+# ================= VECTOR FLOW =================
 st.subheader("Flow Direction Field")
 
 step = 8
 U = -np.gradient(Z, axis=1)
 V = -np.gradient(Z, axis=0)
 
-fig3, ax3 = plt.subplots()
-ax3.quiver(Xg[::step, ::step], Yg[::step, ::step],
-           U[::step, ::step], V[::step, ::step])
-ax3.set_title("Flow Vectors over Hull Surface")
-st.pyplot(fig4)
+fig_vec, ax_vec = plt.subplots()
+ax_vec.quiver(Xg[::step, ::step], Yg[::step, ::step],
+              U[::step, ::step], V[::step, ::step])
+ax_vec.set_title("Flow Vectors")
+st.pyplot(fig_vec)
 
 # ================= DRAG CURVE =================
 st.subheader("Drag vs Velocity")
@@ -172,17 +142,16 @@ for v in vels:
     X = build_input(v)
     drag_curve.append(model.predict(X)[0][0])
 
-fig4, ax4 = plt.subplots()
-ax4.plot(vels, drag_curve)
-ax4.set_xlabel("Velocity")
-ax4.set_ylabel("Drag Reduction")
-st.pyplot(fig5)
+fig_drag, ax_drag = plt.subplots()
+ax_drag.plot(vels, drag_curve)
+ax_drag.set_xlabel("Velocity")
+ax_drag.set_ylabel("Drag Reduction")
+st.pyplot(fig_drag)
 
 # ================= COMPARISON =================
-st.subheader("Surface Performance Comparison")
+st.subheader("Surface Comparison")
 
-labels = ["Smooth Hull", "Riblet Surface", "Lotus Surface", "Hybrid Biomimetic"]
-
+labels = ["Smooth", "Riblet", "Lotus", "Hybrid"]
 smooth = 40
 riblet_val = 65
 lotus_val = 60
@@ -190,14 +159,14 @@ hybrid = pred[0] if 'pred' in locals() else 75
 
 values = [smooth, riblet_val, lotus_val, hybrid]
 
-fig5, ax5 = plt.subplots()
-ax5.bar(labels, values)
-st.pyplot(fig6)
+fig_comp, ax_comp = plt.subplots()
+ax_comp.bar(labels, values)
+st.pyplot(fig_comp)
 
 # ================= INSIGHT =================
 st.subheader("Engineering Insight")
 
 st.write("""
-This system integrates riblet microstructures, lotus-inspired hydrophobicity,
-and composite material optimization for marine hull performance enhancement.
+This system integrates riblet-induced drag reduction, lotus-inspired hydrophobicity,
+and material-coating optimization to reduce biofouling and improve marine hull efficiency.
 """)
