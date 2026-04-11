@@ -68,8 +68,14 @@ Xg, Yg = np.meshgrid(x, y)
 hull_base = 1 - (Yg**2) / (1.5**2)
 hull_base = np.clip(hull_base, 0, 1)
 
-riblet_surface = riblet_height * np.sin(12 * Xg) * np.cos(3 * Yg)
-lotus_surface = lotus_intensity * np.random.normal(0, 0.02, Xg.shape)
+# ✔ riblets aligned with flow direction (x-axis)
+riblet_surface = riblet_height * np.sin(20 * Xg)
+
+# ✔ lotus hierarchical texture (micro + nano)
+micro_texture = 0.03 * np.sin(8 * Xg) * np.sin(8 * Yg)
+nano_texture = 0.01 * np.random.normal(0, 1, Xg.shape)
+
+lotus_surface = lotus_intensity * (micro_texture + nano_texture)
 
 Z = hull_base + riblet_surface + lotus_surface
 
