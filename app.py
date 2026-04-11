@@ -81,22 +81,32 @@ st.pyplot(fig)
 # ================= PRO MODE: INTERACTIVE 3D (PLOTLY) =================
 st.subheader("Interactive Hull Viewer (Rotate & Zoom)")
 
-fig_plotly = go.Figure(
-    data=[
-        go.Surface(z=Z, x=Xg, y=Yg, colorscale="Viridis")
-    ]
+fig_plotly = go.Figure()
+
+fig_plotly.add_trace(
+    go.Surface(
+        z=Z,
+        x=Xg,
+        y=Yg,
+        colorscale="Viridis",
+        showscale=True
+    )
 )
 
 fig_plotly.update_layout(
-    margin=dict(l=0, r=0, t=30, b=0),
+    title="Biomimetic Hull Surface (Interactive 3D)",
+    autosize=True,
+    margin=dict(l=0, r=0, t=40, b=0),
     scene=dict(
         xaxis_title="Length",
         yaxis_title="Beam",
-        zaxis_title="Surface"
+        zaxis_title="Surface Height",
+        aspectmode="auto"
     )
 )
 
 st.plotly_chart(fig_plotly, use_container_width=True)
+
 
 # ================= FLOW FIELD =================
 st.subheader("Flow Field (CFD-style Approximation)")
