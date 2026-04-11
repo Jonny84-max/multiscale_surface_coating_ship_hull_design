@@ -72,7 +72,7 @@ hull_base = np.clip(hull_base, 0, 1)
 
 # ================= RIBLETS (LONGITUDINAL) =================
 # periodic grooves aligned with flow (x-direction)
-riblet = riblet_height * np.sin((2 * np.pi / riblet_spacing) * Xg)
+riblet_surface = riblet_height * np.sin((2 * np.pi / riblet_spacing) * Xg)
 
 # LOTUS STRUCTURE (STRUCTURED, NOT RANDOM)
 # -----------------------------
