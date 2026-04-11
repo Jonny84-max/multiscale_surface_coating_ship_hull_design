@@ -12,5 +12,4 @@ model.fit(X, y)
 
 joblib.dump(model, "model.pkl", compress=5)
 
-
 print("Model trained")
