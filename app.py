@@ -113,10 +113,10 @@ fig_plotly.update_layout(
         yaxis_title="Port → Starboard",
         zaxis_title="Height",
         camera=dict(
-            eye=dict(x=2.8, y=0.0, z=1.2)
+            eye=dict(x=0.0, y=2.8, z=1.2)
         ),
         aspectmode="manual",
-        aspectratio=dict(x=3, y=1, z=0.6)
+        aspectratio=dict(x=1, y=3, z=0.6)
     )
 )
 
