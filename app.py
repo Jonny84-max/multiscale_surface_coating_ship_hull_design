@@ -61,23 +61,25 @@ if st.button("Run Simulation"):
 # ================= 3D BIOMIMETIC HULL (MATPLOTLIB) =================
 st.subheader("3D Biomimetic Hull (Static View)")
 
-x = np.linspace(-3, 3, 120)
-y = np.linspace(-1.5, 1.5, 120)
+x = np.linspace(-3, 3, 140)
+y = np.linspace(-1.5, 1.5, 140)
 Xg, Yg = np.meshgrid(x, y)
 
+# base hull
 hull_base = 1 - (Yg**2) / (1.5**2)
 hull_base = np.clip(hull_base, 0, 1)
 
-# ✔ riblets aligned with flow direction (x-axis)
-riblet_surface = riblet_height * np.sin(20 * Xg)
+# ================= RIBLETS (LONGITUDINAL) =================
+riblet_surface = riblet_height * np.sin(25 * Xg) ** 2
 
-# ✔ lotus hierarchical texture (micro + nano)
-micro_texture = 0.03 * np.sin(8 * Xg) * np.sin(8 * Yg)
-nano_texture = 0.01 * np.random.normal(0, 1, Xg.shape)
+# ================= LOTUS (HIERARCHICAL ROUGHNESS) =================
+micro = 0.05 * np.sin(10 * Xg) * np.sin(10 * Yg)
+nano = 0.02 * np.random.normal(0, 1, Xg.shape)
 
-lotus_surface = lotus_intensity * (micro_texture + nano_texture)
+lotus_surface = lotus_intensity * (micro + nano)
 
-Z = hull_base + riblet_surface + lotus_surface
+# FINAL SURFACE
+Z = hull_base + riblet_surface + 0.3 * lotus_surface
 
 fig = plt.figure(figsize=(7, 5))
 ax = fig.add_subplot(111, projection='3d')
