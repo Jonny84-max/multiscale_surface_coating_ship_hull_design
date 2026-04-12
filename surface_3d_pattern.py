@@ -14,9 +14,8 @@ def generate_stl(riblet_spacing, riblet_height, resolution=40, thickness=0.02):
     Z_bottom = Z_top * 0   # perfectly smooth inner hull
 
     top_vertices = np.column_stack((X.flatten(), Y.flatten(), Z_top.flatten()))
-    bottom_vertices = np.column_stack((X.flatten(), Y.flatten(), Z_bottom.flatten()))
-
-    vertices = np.vstack((top_vertices, bottom_vertices))
+    
+    vertices = np.vstack((top_vertices))
 
     nx, ny = X.shape
     faces = []
