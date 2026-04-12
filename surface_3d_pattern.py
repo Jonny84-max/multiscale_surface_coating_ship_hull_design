@@ -1,10 +1,10 @@
 import numpy as np
 from stl import mesh
 
-def generate_stl(riblet_spacing, riblet_height, thickness=0.05):
+def generate_stl(riblet_spacing, riblet_height, resolution =120 thickness=0.05):
 
-    x = np.linspace(0, 0.7, 50)
-    y = np.linspace(0, 0.7, 50)
+    x = np.linspace(0, 5, resolution)
+    y = np.linspace(0, 5, resolution)
     X, Y = np.meshgrid(x, y)
 
     riblets = riblet_height * np.sin((2*np.pi / riblet_spacing) * X)
