@@ -3,6 +3,7 @@ import numpy as np
 import joblib
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
+import pyvista as pv
 
 # ================= LOAD MODEL =================
 data = joblib.load("model.pkl")
@@ -56,8 +57,8 @@ if st.button("Run Simulation"):
     st.metric("Durability", f"{pred[3]:.2f}")
 
 # ================= GRID =================
-x = np.linspace(0, 5, 150)
-y = np.linspace(0, 5, 150)
+x = np.linspace(0, 5, resolution)
+y = np.linspace(0, 5, resolution)
 Xg, Yg = np.meshgrid(x, y)
 
 # ================= HULL BASE =================
