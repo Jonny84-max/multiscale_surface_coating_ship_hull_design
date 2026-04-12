@@ -11,7 +11,7 @@ def generate_stl(riblet_spacing, riblet_height, resolution=50, thickness=0.02):
     lotus = 0.05 * np.cos(6*X) * np.cos(6*Y)
 
     Z_top = riblets + lotus
-    Z_bottom = Z_top - thickness
+    Z_bottom = Z_top * 0   # perfectly smooth inner hull
 
     top_vertices = np.column_stack((X.flatten(), Y.flatten(), Z_top.flatten()))
     bottom_vertices = np.column_stack((X.flatten(), Y.flatten(), Z_bottom.flatten()))
