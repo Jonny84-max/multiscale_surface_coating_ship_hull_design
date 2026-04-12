@@ -18,6 +18,7 @@ st.sidebar.header("Design Inputs")
 riblet_height = st.sidebar.slider("Riblet Height (mm)", 0.01, 0.3)
 riblet_spacing = st.sidebar.slider("Riblet Spacing (mm)", 0.05, 1.0)
 lotus_intensity = st.sidebar.slider("Lotus Intensity", 0.0, 1.0)
+resolution = st.sidebar.slider("Mesh Resolution", 30, 150, 100)
 
 velocity = st.sidebar.slider("Velocity", 0.5, 12.0)
 temperature = st.sidebar.slider("Temperature", 0, 40)
