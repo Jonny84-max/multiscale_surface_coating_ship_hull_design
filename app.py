@@ -135,11 +135,11 @@ if st.button("Generate STL"):
 # ================= FLOW FIELD =================
 st.subheader("Velocity Field")
 
-velocity_field = 1 / (1 + np.abs(Z))
+# force Z to match grid shape
+Z = np.array(Z)
+Z = Z.reshape(Xg.shape)
 
-# IMPORTANT FIX: force same shape as grid
-if velocity_field.shape != Xg.shape:
-    velocity_field = velocity_field.reshape(Xg.shape)
+velocity_field = 1 / (1 + np.abs(Z))
 
 fig_flow, ax_flow = plt.subplots()
 contour = ax_flow.contourf(Xg, Yg, velocity_field, levels=25)
