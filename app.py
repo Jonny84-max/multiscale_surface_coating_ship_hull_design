@@ -4,38 +4,6 @@ import joblib
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 
-from stl import mesh
-import tempfile
-
-def export_stl(X, Y, Z):
-    vertices = np.column_stack((X.flatten(), Y.flatten(), Z.flatten()))
-    faces = []
-
-    nx, ny = X.shape
-
-    for i in range(nx - 1):
-        for j in range(ny - 1):
-            v1 = i * ny + j
-            v2 = (i + 1) * ny + j
-            v3 = (i + 1) * ny + (j + 1)
-            v4 = i * ny + (j + 1)
-
-            faces.append([v1, v2, v3])
-            faces.append([v1, v3, v4])
-
-    faces = np.array(faces)
-
-    surface = mesh.Mesh(np.zeros(len(faces), dtype=mesh.Mesh.dtype))
-
-    for i, f in enumerate(faces):
-        for j in range(3):
-            surface.vectors[i][j] = vertices[f[j]]
-
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".stl")
-    surface.save(tmp.name)
-
-    return tmp.name
-
 # ================= LOAD MODEL =================
 data = joblib.load("model.pkl")
 model = data["model"]
@@ -49,7 +17,7 @@ st.sidebar.header("Design Inputs")
 riblet_height = st.sidebar.slider("Riblet Height (mm)", 0.01, 0.3)
 riblet_spacing = st.sidebar.slider("Riblet Spacing (mm)", 0.05, 1.0)
 lotus_intensity = st.sidebar.slider("Lotus Intensity", 0.0, 1.0)
-resolution = st.sidebar.slider("Mesh Resolution", 30, 200, 100)
+
 velocity = st.sidebar.slider("Velocity", 0.5, 12.0)
 temperature = st.sidebar.slider("Temperature", 0, 40)
 salinity = st.sidebar.slider("Salinity", 10, 40)
@@ -88,8 +56,8 @@ if st.button("Run Simulation"):
     st.metric("Durability", f"{pred[3]:.2f}")
 
 # ================= GRID =================
-x = np.linspace(0, 5, resolution)
-y = np.linspace(0, 5, resolution)
+x = np.linspace(0, 5, 150)
+y = np.linspace(0, 5, 150)
 Xg, Yg = np.meshgrid(x, y)
 
 # ================= HULL BASE =================
@@ -129,18 +97,6 @@ fig_plotly.update_layout(
 
 st.plotly_chart(fig_plotly, use_container_width=True)
 
-# ================= STL EXPORT =================
-st.subheader("Export STL")
-
-stl_file = export_stl(Xg, Yg, Z)
-
-with open(stl_file, "rb") as f:
-    st.download_button(
-        label="Download STL for SimScale",
-        data=f,
-        file_name="biomimetic_hull.stl",
-        mime="application/octet-stream"
-    )
 # ================= FLOW FIELD =================
 st.subheader("Velocity Field")
 
