@@ -132,10 +132,12 @@ st.subheader("Velocity Field")
 
 velocity_field = 1 / (1 + np.abs(Z))
 
+# IMPORTANT FIX: force same shape as grid
+if velocity_field.shape != Xg.shape:
+    velocity_field = velocity_field.reshape(Xg.shape)
+
 fig_flow, ax_flow = plt.subplots()
 contour = ax_flow.contourf(Xg, Yg, velocity_field, levels=25)
-plt.colorbar(contour)
-ax_flow.set_title("Flow Distribution")
 st.pyplot(fig_flow)
 
 # ================= BIOFOULING =================
