@@ -62,7 +62,7 @@ if st.button("Run Simulation"):
     st.metric("Hydrophobicity", f"{pred[2]:.2f}")
     st.metric("Durability", f"{pred[3]:.2f}")
 
-# ================= GRID (ONE UNIFIED SYSTEM) =================
+# ================= GRID =================
 resolution = 120
 
 x = np.linspace(0, 5, resolution)
@@ -87,10 +87,11 @@ st.plotly_chart(fig, use_container_width=True)
 # ================= STL EXPORT =================
 st.subheader("Export STL for SimScale")
 
-file_path = generate_stl(
+X_s, Y_s, Z_s, file_path = generate_stl(
     riblet_spacing,
     riblet_height,
-    resolution=120
+    resolution=120,
+    mode=mode   # PASS MODE (VERY IMPORTANT)
 )
 
 with open(file_path, "rb") as f:
@@ -108,10 +109,6 @@ st.subheader("Velocity Field")
 velocity_field = 1 / (1 + np.abs(Z))
 
 velocity_field = np.array(velocity_field)
-
-# 🔥 CRITICAL FIX: force shape match
-if velocity_field.shape != Xg.shape:
-    velocity_field = velocity_field.reshape(Xg.shape)
 
 fig_flow, ax_flow = plt.subplots()
 contour = ax_flow.contourf(Xg, Yg, velocity_field, levels=25)
