@@ -3,7 +3,6 @@ import numpy as np
 import joblib
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
-import pyvista as pv
 
 from surface_3d_pattern import generate_stl
 
@@ -11,6 +10,10 @@ from surface_3d_pattern import generate_stl
 data = joblib.load("model.pkl")
 model = data["model"]
 columns = data["columns"]
+
+# ================= FIXED MAPPINGS =================
+material_map = {"GFRP": 0, "CFRP": 1, "Hybrid": 2}
+coating_map = {"Epoxy": 0, "Vinyl": 1, "PDMS": 2, "Fluoro": 3, "Sol-gel": 4}
 
 st.title("Hybrid Biomimetic Hull Design System")
 
@@ -29,6 +32,8 @@ time = st.sidebar.slider("Time (days)", 1, 1095)
 material = st.sidebar.selectbox("Material", ["GFRP", "CFRP", "Hybrid"])
 coating = st.sidebar.selectbox("Coating", ["Epoxy", "Vinyl", "PDMS", "Fluoro", "Sol-gel"])
 
+mode = st.sidebar.selectbox("Output Mode", ["Visualization STL", "CFD STL"])
+
 # ================= FEATURE BUILDER =================
 def build_input(v):
     input_dict = {
@@ -44,7 +49,9 @@ def build_input(v):
     }
     return np.array([[input_dict[col] for col in columns]])
 
-# ================= PREDICTION =================
+# ================= MODEL PREDICTION =================
+pred = None
+
 if st.button("Run Simulation"):
     X = build_input(velocity)
     pred = model.predict(X)[0]
@@ -55,62 +62,36 @@ if st.button("Run Simulation"):
     st.metric("Hydrophobicity", f"{pred[2]:.2f}")
     st.metric("Durability", f"{pred[3]:.2f}")
 
-# ================= GRID =================
-x = np.linspace(0, 5, 150)
-y = np.linspace(0, 5, 150)
+# ================= GRID (ONE UNIFIED SYSTEM) =================
+resolution = 150
+
+x = np.linspace(0, 5, resolution)
+y = np.linspace(0, 5, resolution)
 Xg, Yg = np.meshgrid(x, y)
 
-# ================= HULL BASE =================
+# ================= HULL SURFACE =================
 hull_base = 1 - (Yg**2) / (1.5**2)
 hull_base = np.clip(hull_base, 0, 1)
 
-# ================= RIBLETS =================
 riblet = riblet_height * np.sin((2 * np.pi / riblet_spacing) * Xg)
-
-# ================= LOTUS =================
 lotus = lotus_intensity * (np.cos(8 * Xg) * np.cos(8 * Yg))
 
-# ================= FINAL SURFACE =================
 Z = hull_base + riblet + 0.3 * lotus
 
-# ================= 3D SURFACE =================
+# ================= 3D PLOT (STREAMLIT) =================
 st.subheader("3D Biomimetic Hull Surface")
 
-fig = plt.figure()
-ax = fig.add_subplot(111, projection='3d')
-ax.plot_surface(Xg, Yg, Z)
-ax.set_title("Riblet + Lotus Hybrid Surface")
-st.pyplot(fig)
+fig = go.Figure(data=[go.Surface(x=Xg, y=Yg, z=Z)])
+st.plotly_chart(fig, use_container_width=True)
 
-# ================= INTERACTIVE 3D =================
-st.subheader("Interactive 3D Viewer")
+# ================= STL EXPORT =================
+st.subheader("Export STL for SimScale")
 
-fig_plotly = go.Figure(data=[go.Surface(x=Xg, y=Yg, z=Z)])
-
-fig_plotly.update_layout(
-    scene=dict(
-        xaxis_title="Flow Direction",
-        yaxis_title="Hull Width",
-        zaxis_title="Surface Height"
-    )
-)
-
-st.plotly_chart(fig_plotly, use_container_width=True)
-
-# ================= 3D GEOMETRY STL =================
-X, Y, Z, file_path = generate_stl(
+file_path = generate_stl(
     riblet_spacing,
     riblet_height,
     resolution=80
 )
-
-st.subheader("3D Biomimetic Hull Surface")
-
-fig = go.Figure(data=[go.Surface(x=X, y=Y, z=Z)])
-
-st.plotly_chart(fig, use_container_width=True)
-
-st.subheader("Export STL for SimScale")
 
 with open(file_path, "rb") as f:
     st.download_button(
@@ -120,32 +101,18 @@ with open(file_path, "rb") as f:
         mime="application/octet-stream"
     )
 
-mode = st.selectbox("Output Mode", ["Visualization STL", "CFD STL"])
-
-if st.button("Generate STL"):
-    file_path = generate_stl(
-        riblet_spacing,
-        riblet_height,
-        mode
-    )
-
-    with open(file_path, "rb") as f:
-        st.download_button("Download STL", f, file_name="hull.stl")
-
 # ================= FLOW FIELD =================
 st.subheader("Velocity Field")
 
-# force Z to match grid shape
-Z = np.array(Z)
-Z = Z.reshape(Xg.shape)
+Z_safe = np.array(Z)
 
-velocity_field = 1 / (1 + np.abs(Z))
+velocity_field = 1 / (1 + np.abs(Z_safe))
 
 fig_flow, ax_flow = plt.subplots()
-contour = ax_flow.contourf(Xg, Yg, velocity_field, levels=25)
+ax_flow.contourf(Xg, Yg, velocity_field, levels=25)
 st.pyplot(fig_flow)
 
-# ================= BIOFOULING =================
+# ================= BIOFOULING ZONES =================
 st.subheader("Biofouling Attachment Zones")
 
 organism_size = 0.2
@@ -153,10 +120,9 @@ attachment_zone = np.abs(Z) < organism_size
 
 fig_bio, ax_bio = plt.subplots()
 ax_bio.contourf(Xg, Yg, attachment_zone, levels=1)
-ax_bio.set_title("Attachment Risk Zones")
 st.pyplot(fig_bio)
 
-# ================= VECTOR FLOW =================
+# ================= FLOW VECTORS =================
 st.subheader("Flow Direction Field")
 
 step = 8
@@ -166,7 +132,6 @@ V = -np.gradient(Z, axis=0)
 fig_vec, ax_vec = plt.subplots()
 ax_vec.quiver(Xg[::step, ::step], Yg[::step, ::step],
               U[::step, ::step], V[::step, ::step])
-ax_vec.set_title("Flow Vectors")
 st.pyplot(fig_vec)
 
 # ================= DRAG CURVE =================
@@ -181,8 +146,6 @@ for v in vels:
 
 fig_drag, ax_drag = plt.subplots()
 ax_drag.plot(vels, drag_curve)
-ax_drag.set_xlabel("Velocity")
-ax_drag.set_ylabel("Drag Reduction")
 st.pyplot(fig_drag)
 
 # ================= COMPARISON =================
@@ -192,12 +155,10 @@ labels = ["Smooth", "Riblet", "Lotus", "Hybrid"]
 smooth = 40
 riblet_val = 65
 lotus_val = 60
-hybrid = pred[0] if 'pred' in locals() else 75
-
-values = [smooth, riblet_val, lotus_val, hybrid]
+hybrid = pred[0] if pred is not None else 75
 
 fig_comp, ax_comp = plt.subplots()
-ax_comp.bar(labels, values)
+ax_comp.bar(labels, [smooth, riblet_val, lotus_val, hybrid])
 st.pyplot(fig_comp)
 
 # ================= INSIGHT =================
@@ -205,5 +166,5 @@ st.subheader("Engineering Insight")
 
 st.write("""
 This system integrates riblet-induced drag reduction, lotus-inspired hydrophobicity,
-and material-coating optimization to reduce biofouling and improve marine hull efficiency.
+and material-coating optimization for marine hull performance improvement.
 """)
