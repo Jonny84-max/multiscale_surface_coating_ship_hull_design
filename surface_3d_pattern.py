@@ -1,7 +1,7 @@
 import numpy as np
 from stl import mesh
 
-def generate_stl(riblet_spacing, riblet_height, resolution=40, thickness=0.02):
+def generate_stl(riblet_spacing, riblet_height, resolution=40, thickness=0.05):
 
     x = np.linspace(0, 0.7, resolution)
     y = np.linspace(0, 0.7, resolution)
