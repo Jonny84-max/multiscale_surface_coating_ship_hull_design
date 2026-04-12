@@ -13,9 +13,9 @@ def generate_stl(riblet_spacing, riblet_height, resolution=40, thickness=0.05):
     Z_top = riblets + lotus
     Z_bottom = Z_top * 0   # perfectly smooth inner hull
 
-    top_vertices = np.column_stack((X.flatten(), Y.flatten(), Z_top.flatten()))
-    
-    vertices = np.vstack((top_vertices))
+    if mode == "Visualization STL":
+    # ONLY TOP SURFACE
+    vertices = np.column_stack((X.flatten(), Y.flatten(), Z_top.flatten()))
 
     nx, ny = X.shape
     faces = []
@@ -30,6 +30,39 @@ def generate_stl(riblet_spacing, riblet_height, resolution=40, thickness=0.05):
             faces.append([v1, v2, v3])
             faces.append([v1, v3, v4])
 
+else:
+    # CFD MODE → FULL SOLID BODY
+    top_vertices = np.column_stack((X.flatten(), Y.flatten(), Z_top.flatten()))
+    bottom_vertices = np.column_stack((X.flatten(), Y.flatten(), Z_bottom.flatten()))
+
+    vertices = np.vstack((top_vertices, bottom_vertices))
+
+    nx, ny = X.shape
+    faces = []
+
+    # TOP
+    for i in range(nx - 1):
+        for j in range(ny - 1):
+            v1 = i * ny + j
+            v2 = (i + 1) * ny + j
+            v3 = (i + 1) * ny + (j + 1)
+            v4 = i * ny + (j + 1)
+
+            faces.append([v1, v2, v3])
+            faces.append([v1, v3, v4])
+
+    # BOTTOM
+    offset = nx * ny
+    for i in range(nx - 1):
+        for j in range(ny - 1):
+            v1 = offset + i * ny + j
+            v2 = offset + (i + 1) * ny + j
+            v3 = offset + (i + 1) * ny + (j + 1)
+            v4 = offset + i * ny + (j + 1)
+
+            faces.append([v4, v3, v2])
+            faces.append([v4, v2, v1])
+    
     faces = np.array(faces)
 
     surface = mesh.Mesh(np.zeros(len(faces), dtype=mesh.Mesh.dtype))
