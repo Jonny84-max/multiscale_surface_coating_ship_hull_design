@@ -1,19 +1,21 @@
 import numpy as np
 from stl import mesh
 
-def generate_stl(riblet_spacing, riblet_height, resolution =120 thickness=0.05):
+def generate_stl(riblet_spacing, riblet_height, resolution=120, thickness=0.05, mode="Visualization STL"):
 
+    # GRID (MUST MATCH APP)
     x = np.linspace(0, 5, resolution)
     y = np.linspace(0, 5, resolution)
     X, Y = np.meshgrid(x, y)
 
+    # SURFACE
     riblets = riblet_height * np.sin((2*np.pi / riblet_spacing) * X)
     lotus = 0.05 * np.cos(6*X) * np.cos(6*Y)
 
     Z_top = riblets + lotus
 
     # ==============================
-    # MODE 1: VISUALIZATION (SIMPLE SURFACE)
+    # VISUALIZATION MODE (ONLY TOP)
     # ==============================
     if mode == "Visualization STL":
 
@@ -33,11 +35,11 @@ def generate_stl(riblet_spacing, riblet_height, resolution =120 thickness=0.05):
                 faces.append([v1, v3, v4])
 
     # ==============================
-    # MODE 2: CFD (FULL SOLID SURFACE)
+    # CFD MODE (TOP + FLAT BOTTOM)
     # ==============================
     else:
 
-        Z_bottom = Z_top - thickness
+        Z_bottom = np.zeros_like(Z_top)  # 🔥 FLAT (THIS FIXES YOUR ISSUE)
 
         top_vertices = np.column_stack((X.flatten(), Y.flatten(), Z_top.flatten()))
         bottom_vertices = np.column_stack((X.flatten(), Y.flatten(), Z_bottom.flatten()))
@@ -60,7 +62,7 @@ def generate_stl(riblet_spacing, riblet_height, resolution =120 thickness=0.05):
 
         offset = nx * ny
 
-        # BOTTOM
+        # BOTTOM (FLAT + REVERSED NORMAL)
         for i in range(nx - 1):
             for j in range(ny - 1):
                 v1 = offset + i * ny + j
@@ -71,11 +73,8 @@ def generate_stl(riblet_spacing, riblet_height, resolution =120 thickness=0.05):
                 faces.append([v4, v3, v2])
                 faces.append([v4, v2, v1])
 
-    # ==============================
     # BUILD STL
-    # ==============================
     faces = np.array(faces)
-
     surface = mesh.Mesh(np.zeros(len(faces), dtype=mesh.Mesh.dtype))
 
     for i, f in enumerate(faces):
@@ -85,4 +84,4 @@ def generate_stl(riblet_spacing, riblet_height, resolution =120 thickness=0.05):
     file_path = "biomimetic_hull.stl"
     surface.save(file_path)
 
-    return file_path
+    return X, Y, Z_top, file_path
