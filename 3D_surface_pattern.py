@@ -54,4 +54,4 @@ def generate_stl(riblet_spacing, riblet_height, resolution=80, thickness=0.05):
     file_path = "biomimetic_hull.stl"
     surface.save(file_path)
 
-    return file_path
+    return X, Y, Z_top, file_path
