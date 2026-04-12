@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import pyvista as pv
 
-from 3d_surface_pattern import surface_3d_pattern
+from 3d_surface_pattern import generate_stl
 
 # ================= LOAD MODEL =================
 data = joblib.load("model.pkl")
