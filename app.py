@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import pyvista as pv
 
+from 3d_surface_pattern import surface_3d_pattern
+
 # ================= LOAD MODEL =================
 data = joblib.load("model.pkl")
 model = data["model"]
@@ -97,6 +99,29 @@ fig_plotly.update_layout(
 )
 
 st.plotly_chart(fig_plotly, use_container_width=True)
+
+# ================= 3D GEOMETRY STL =================
+X, Y, Z, file_path = generate_stl(
+    riblet_spacing,
+    riblet_height,
+    resolution=80
+)
+
+st.subheader("3D Biomimetic Hull Surface")
+
+fig = go.Figure(data=[go.Surface(x=X, y=Y, z=Z)])
+
+st.plotly_chart(fig, use_container_width=True)
+
+st.subheader("Export STL for SimScale")
+
+with open(file_path, "rb") as f:
+    st.download_button(
+        label="Download STL",
+        data=f,
+        file_name="biomimetic_hull.stl",
+        mime="application/octet-stream"
+    )
 
 # ================= FLOW FIELD =================
 st.subheader("Velocity Field")
