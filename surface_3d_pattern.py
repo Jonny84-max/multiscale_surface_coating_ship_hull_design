@@ -1,7 +1,7 @@
 import numpy as np
 from stl import mesh
 
-def generate_stl(riblet_spacing, riblet_height, resolution=40, thickness=0.05):
+def generate_stl(riblet_spacing, riblet_height, mode, resolution=40, thickness=0.05):
 
     x = np.linspace(0, 0.7, resolution)
     y = np.linspace(0, 0.7, resolution)
@@ -12,43 +12,68 @@ def generate_stl(riblet_spacing, riblet_height, resolution=40, thickness=0.05):
 
     Z_top = riblets + lotus
 
+    # ==============================
+    # MODE 1: VISUALIZATION (SIMPLE SURFACE)
+    # ==============================
     if mode == "Visualization STL":
-    # ONLY TOP SURFACE
-    vertices = np.column_stack((X.flatten(), Y.flatten(), Z_top.flatten()))
 
-    nx, ny = X.shape
-    faces = []
+        vertices = np.column_stack((X.flatten(), Y.flatten(), Z_top.flatten()))
 
-    for i in range(nx - 1):
-        for j in range(ny - 1):
-            v1 = i * ny + j
-            v2 = (i + 1) * ny + j
-            v3 = (i + 1) * ny + (j + 1)
-            v4 = i * ny + (j + 1)
+        nx, ny = X.shape
+        faces = []
 
-            faces.append([v1, v2, v3])
-            faces.append([v1, v3, v4])
+        for i in range(nx - 1):
+            for j in range(ny - 1):
+                v1 = i * ny + j
+                v2 = (i + 1) * ny + j
+                v3 = (i + 1) * ny + (j + 1)
+                v4 = i * ny + (j + 1)
 
-else:
-    # CFD MODE → FULL SOLID BODY
-    top_vertices = np.column_stack((X.flatten(), Y.flatten(), Z_top.flatten()))
+                faces.append([v1, v2, v3])
+                faces.append([v1, v3, v4])
 
-    vertices = np.vstack((top_vertices))
+    # ==============================
+    # MODE 2: CFD (FULL SOLID SURFACE)
+    # ==============================
+    else:
 
-    nx, ny = X.shape
-    faces = []
+        Z_bottom = Z_top - thickness
 
-    # TOP
-    for i in range(nx - 1):
-        for j in range(ny - 1):
-            v1 = i * ny + j
-            v2 = (i + 1) * ny + j
-            v3 = (i + 1) * ny + (j + 1)
-            v4 = i * ny + (j + 1)
+        top_vertices = np.column_stack((X.flatten(), Y.flatten(), Z_top.flatten()))
+        bottom_vertices = np.column_stack((X.flatten(), Y.flatten(), Z_bottom.flatten()))
 
-            faces.append([v1, v2, v3])
-            faces.append([v1, v3, v4])
+        vertices = np.vstack((top_vertices, bottom_vertices))
 
+        nx, ny = X.shape
+        faces = []
+
+        # TOP
+        for i in range(nx - 1):
+            for j in range(ny - 1):
+                v1 = i * ny + j
+                v2 = (i + 1) * ny + j
+                v3 = (i + 1) * ny + (j + 1)
+                v4 = i * ny + (j + 1)
+
+                faces.append([v1, v2, v3])
+                faces.append([v1, v3, v4])
+
+        offset = nx * ny
+
+        # BOTTOM
+        for i in range(nx - 1):
+            for j in range(ny - 1):
+                v1 = offset + i * ny + j
+                v2 = offset + (i + 1) * ny + j
+                v3 = offset + (i + 1) * ny + (j + 1)
+                v4 = offset + i * ny + (j + 1)
+
+                faces.append([v4, v3, v2])
+                faces.append([v4, v2, v1])
+
+    # ==============================
+    # BUILD STL
+    # ==============================
     faces = np.array(faces)
 
     surface = mesh.Mesh(np.zeros(len(faces), dtype=mesh.Mesh.dtype))
@@ -60,4 +85,4 @@ else:
     file_path = "biomimetic_hull.stl"
     surface.save(file_path)
 
-    return X, Y, Z_top, file_path
+    return file_path
