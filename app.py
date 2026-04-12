@@ -28,13 +28,6 @@ time = st.sidebar.slider("Time (days)", 1, 1095)
 
 material = st.sidebar.selectbox("Material", ["GFRP", "CFRP", "Hybrid"])
 coating = st.sidebar.selectbox("Coating", ["Epoxy", "Vinyl", "PDMS", "Fluoro", "Sol-gel"])
-mode = st.sidebar.selectbox(
-    "Output Mode",
-    ["Visualization STL", "CFD STL"]
-)
-
-material_map = {"GFRP": 0, "CFRP": 1, "Hybrid": 2}
-coating_map = {"Epoxy": 0, "Vinyl": 1, "PDMS": 2, "Fluoro": 3, "Sol-gel": 4}
 
 # ================= FEATURE BUILDER =================
 def build_input(v):
@@ -126,6 +119,18 @@ with open(file_path, "rb") as f:
         file_name="biomimetic_hull.stl",
         mime="application/octet-stream"
     )
+
+mode = st.selectbox("Output Mode", ["Visualization STL", "CFD STL"])
+
+if st.button("Generate STL"):
+    file_path = generate_stl(
+        riblet_spacing,
+        riblet_height,
+        mode
+    )
+
+    with open(file_path, "rb") as f:
+        st.download_button("Download STL", f, file_name="hull.stl")
 
 # ================= FLOW FIELD =================
 st.subheader("Velocity Field")
