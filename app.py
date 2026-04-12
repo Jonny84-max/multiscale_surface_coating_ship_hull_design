@@ -104,13 +104,20 @@ with open(file_path, "rb") as f:
 # ================= FLOW FIELD =================
 st.subheader("Velocity Field")
 
-Z_safe = np.array(Z)
+# force everything to match CFD grid
+velocity_field = 1 / (1 + np.abs(Z))
 
-velocity_field = 1 / (1 + np.abs(Z_safe))
+velocity_field = np.array(velocity_field)
+
+# 🔥 CRITICAL FIX: force shape match
+if velocity_field.shape != Xg.shape:
+    velocity_field = velocity_field.reshape(Xg.shape)
 
 fig_flow, ax_flow = plt.subplots()
-ax_flow.contourf(Xg, Yg, velocity_field, levels=25)
+contour = ax_flow.contourf(Xg, Yg, velocity_field, levels=25)
+
 st.pyplot(fig_flow)
+
 
 # ================= BIOFOULING ZONES =================
 st.subheader("Biofouling Attachment Zones")
