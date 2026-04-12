@@ -63,7 +63,7 @@ if st.button("Run Simulation"):
     st.metric("Durability", f"{pred[3]:.2f}")
 
 # ================= GRID (ONE UNIFIED SYSTEM) =================
-resolution = 150
+resolution = 120
 
 x = np.linspace(0, 5, resolution)
 y = np.linspace(0, 5, resolution)
@@ -90,7 +90,7 @@ st.subheader("Export STL for SimScale")
 file_path = generate_stl(
     riblet_spacing,
     riblet_height,
-    resolution=80
+    resolution=120
 )
 
 with open(file_path, "rb") as f:
