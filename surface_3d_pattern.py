@@ -30,18 +30,6 @@ def generate_stl(riblet_spacing, riblet_height, resolution=40, thickness=0.02):
             faces.append([v1, v2, v3])
             faces.append([v1, v3, v4])
 
-    offset = nx * ny
-
-    for i in range(nx - 1):
-        for j in range(ny - 1):
-            v1 = offset + i * ny + j
-            v2 = offset + (i + 1) * ny + j
-            v3 = offset + (i + 1) * ny + (j + 1)
-            v4 = offset + i * ny + (j + 1)
-
-            faces.append([v4, v3, v2])
-            faces.append([v4, v2, v1])
-
     faces = np.array(faces)
 
     surface = mesh.Mesh(np.zeros(len(faces), dtype=mesh.Mesh.dtype))
