@@ -1,25 +1,25 @@
+
+
+
+
 import streamlit as st
 import numpy as np
 import joblib
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
-from surface_3d_pattern import generate_stl   # ✅ FIXED IMPORT
 
 # ================= LOAD MODEL =================
-@st.cache_resource
-def load_model():
-    data = joblib.load("model.pkl")
-    return data["model"], data["columns"]
-
-model, columns = load_model()
+data = joblib.load("model.pkl")
+model = data["model"]
+columns = data["columns"]
 
 # ================= FIXED MAPPINGS =================
 material_map = {"GFRP": 0, "CFRP": 1, "Hybrid": 2}
 coating_map = {"Epoxy": 0, "Vinyl": 1, "PDMS": 2, "Fluoro": 3, "Sol-gel": 4}
 
-# ================= UI =================
 st.title("Hybrid Biomimetic Hull Design System")
 
+# ================= INPUT =================
 st.sidebar.header("Design Inputs")
 
 riblet_height = st.sidebar.slider("Riblet Height (mm)", 0.01, 0.3)
@@ -31,8 +31,9 @@ temperature = st.sidebar.slider("Temperature", 0, 40)
 salinity = st.sidebar.slider("Salinity", 10, 40)
 time = st.sidebar.slider("Time (days)", 1, 1095)
 
-material = st.sidebar.selectbox("Material", list(material_map.keys()))
-coating = st.sidebar.selectbox("Coating", list(coating_map.keys()))
+material = st.sidebar.selectbox("Material", ["GFRP", "CFRP", "Hybrid"])
+coating = st.sidebar.selectbox("Coating", ["Epoxy", "Vinyl", "PDMS", "Fluoro", "Sol-gel"])
+
 mode = st.sidebar.selectbox("Output Mode", ["Visualization STL", "CFD STL"])
 
 # ================= FEATURE BUILDER =================
@@ -50,94 +51,78 @@ def build_input(v):
     }
     return np.array([[input_dict[col] for col in columns]])
 
-# ================= MODEL =================
+# ================= MODEL PREDICTION =================
 pred = None
 
 if st.button("Run Simulation"):
-    try:
-        X = build_input(velocity)
-        pred = model.predict(X)
+    X = build_input(velocity)
+    pred = model.predict(X)[0]
 
-        if len(pred[0]) >= 4:
-            pred = pred[0]
-            st.subheader("Performance Results")
-            st.metric("Drag Reduction", f"{pred[0]:.2f}")
-            st.metric("Biofouling Risk", f"{pred[1]:.2f}")
-            st.metric("Hydrophobicity", f"{pred[2]:.2f}")
-            st.metric("Durability", f"{pred[3]:.2f}")
-        else:
-            st.error("Model output format mismatch")
-
-    except Exception as e:
-        st.error(f"Prediction failed: {e}")
+    st.subheader("Performance Results")
+    st.metric("Drag Reduction", f"{pred[0]:.2f}")
+    st.metric("Biofouling Risk", f"{pred[1]:.2f}")
+    st.metric("Hydrophobicity", f"{pred[2]:.2f}")
+    st.metric("Durability", f"{pred[3]:.2f}")
 
 # ================= GRID =================
-resolution = 80   # ✅ lighter
+resolution = 120
 
 x = np.linspace(0, 5, resolution)
 y = np.linspace(0, 5, resolution)
 Xg, Yg = np.meshgrid(x, y)
 
-# ================= HULL =================
+# ================= HULL SURFACE =================
 hull_base = 1 - (Yg**2) / (1.5**2)
 hull_base = np.clip(hull_base, 0, 1)
 
-# coating influence
-coating_factor = {
-    "Epoxy": 0.3,
-    "Vinyl": 0.4,
-    "PDMS": 0.9,
-    "Fluoro": 1.0,
-    "Sol-gel": 0.6
-}
-
 riblet = riblet_height * np.sin((2 * np.pi / riblet_spacing) * Xg)
-lotus = lotus_intensity * coating_factor[coating] * (np.cos(8 * Xg) * np.cos(8 * Yg))
+lotus = lotus_intensity * (np.cos(8 * Xg) * np.cos(8 * Yg))
 
 Z = hull_base + riblet + 0.3 * lotus
 
-# ================= 3D =================
+# ================= 3D PLOT (STREAMLIT) =================
 st.subheader("3D Biomimetic Hull Surface")
 
 fig = go.Figure(data=[go.Surface(x=Xg, y=Yg, z=Z)])
 st.plotly_chart(fig, use_container_width=True)
 
-# ================= STL =================
+# ================= STL EXPORT =================
 st.subheader("Export STL for SimScale")
 
-if st.button("Generate STL"):
-    try:
-        X_s, Y_s, Z_s, file_path = generate_stl(
-            riblet_spacing,
-            riblet_height,
-            lotus_intensity,   # ✅ now included
-            resolution=80,
-            mode=mode
-        )
+X_s, Y_s, Z_s, file_path = generate_stl(
+    riblet_spacing,
+    riblet_height,
+    resolution=120,
+    mode=mode   # PASS MODE (VERY IMPORTANT)
+)
 
-        with open(file_path, "rb") as f:
-            st.download_button(
-                "Download STL",
-                f,
-                "biomimetic_hull.stl"
-            )
+with open(file_path, "rb") as f:
+    st.download_button(
+        label="Download STL",
+        data=f,
+        file_name="biomimetic_hull.stl",
+        mime="application/octet-stream"
+    )
 
-    except Exception as e:
-        st.error(f"STL generation failed: {e}")
+# ================= FLOW FIELD =================
+st.subheader("Velocity Field")
 
-# ================= FLOW =================
-st.subheader("Relative Flow Pattern")
-
+# force everything to match CFD grid
 velocity_field = 1 / (1 + np.abs(Z))
 
+velocity_field = np.array(velocity_field)
+
 fig_flow, ax_flow = plt.subplots()
-ax_flow.contourf(Xg, Yg, velocity_field, levels=25)
+contour = ax_flow.contourf(Xg, Yg, velocity_field, levels=25)
+
 st.pyplot(fig_flow)
 
-# ================= BIOFOULING =================
-st.subheader("Biofouling Zones")
 
-attachment_zone = (np.abs(Z) < 0.2) & (velocity_field < 0.8)
+# ================= BIOFOULING ZONES =================
+st.subheader("Biofouling Attachment Zones")
+
+organism_size = 0.2
+attachment_zone = np.abs(Z) < organism_size
 
 fig_bio, ax_bio = plt.subplots()
 ax_bio.contourf(Xg, Yg, attachment_zone, levels=1)
@@ -162,11 +147,8 @@ vels = np.linspace(0.5, 12, 40)
 drag_curve = []
 
 for v in vels:
-    try:
-        X = build_input(v)
-        drag_curve.append(model.predict(X)[0][0])
-    except:
-        drag_curve.append(0)
+    X = build_input(v)
+    drag_curve.append(model.predict(X)[0][0])
 
 fig_drag, ax_drag = plt.subplots()
 ax_drag.plot(vels, drag_curve)
@@ -176,17 +158,19 @@ st.pyplot(fig_drag)
 st.subheader("Surface Comparison")
 
 labels = ["Smooth", "Riblet", "Lotus", "Hybrid"]
-values = [40, 65, 60, pred[0] if pred is not None else 75]
+smooth = 40
+riblet_val = 65
+lotus_val = 60
+hybrid = pred[0] if pred is not None else 75
 
 fig_comp, ax_comp = plt.subplots()
-ax_comp.bar(labels, values)
+ax_comp.bar(labels, [smooth, riblet_val, lotus_val, hybrid])
 st.pyplot(fig_comp)
 
 # ================= INSIGHT =================
 st.subheader("Engineering Insight")
 
 st.write("""
-This system integrates riblet-induced drag reduction, lotus-effect hydrophobicity,
-and nano-composite material optimization with predictive modeling for enhanced
-marine hull performance.
+This system integrates riblet-induced drag reduction, lotus-inspired hydrophobicity,
+and material-coating optimization for marine hull performance improvement.
 """)
