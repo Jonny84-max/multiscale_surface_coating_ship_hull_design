@@ -56,51 +56,40 @@ pred = None
 if st.button("Run Simulation"):
     try:
         X = build_input(velocity)
-        pred = model.predict(X)
+        pred = model.predict(X)[0]
 
-        if len(pred[0]) >= 4:
-            pred = pred[0]
-            st.subheader("Performance Results")
-            st.metric("Drag Reduction", f"{pred[0]:.2f}")
-            st.metric("Biofouling Risk", f"{pred[1]:.2f}")
-            st.metric("Hydrophobicity", f"{pred[2]:.2f}")
-            st.metric("Durability", f"{pred[3]:.2f}")
-        else:
-            st.error("Model output format mismatch")
+        st.subheader("Performance Results")
+        st.metric("Drag Reduction", f"{pred[0]:.2f}")
+        st.metric("Biofouling Risk", f"{pred[1]:.2f}")
+        st.metric("Hydrophobicity", f"{pred[2]:.2f}")
+        st.metric("Durability", f"{pred[3]:.2f}")
 
     except Exception as e:
         st.error(f"Prediction failed: {e}")
 
 # ================= MULTISCALE SURFACE =================
 resolution = 100
-
 x = np.linspace(0, 5, resolution)
 y = np.linspace(0, 5, resolution)
 Xg, Yg = np.meshgrid(x, y)
 
-# Base hull
 hull_base = 1 - (Yg**2) / (1.5**2)
 hull_base = np.clip(hull_base, 0, 1)
 
-# Riblets (aligned with flow)
 riblet = riblet_height * np.sin((2 * np.pi / riblet_spacing) * Xg)
 
-# Lotus nano-scale
 nano_freq = 40
 nano_amp = 0.08 * lotus_intensity
-
 np.random.seed(1)
 noise = 0.02 * np.random.randn(*Xg.shape)
 
 lotus = nano_amp * (np.cos(nano_freq * Xg) * np.cos(nano_freq * Yg)) + noise
 
-# Final surface
 Z = hull_base + riblet + lotus
 
 # ================= 3D PLOT =================
 st.subheader("3D Biomimetic Hull Surface (Multiscale)")
-
-fig = go.Figure(data=[go.Surface(x=Xg, y=Yg, z=Z, colorscale='Viridis')])
+fig = go.Figure(data=[go.Surface(x=Xg, y=Yg, z=Z)])
 st.plotly_chart(fig, use_container_width=True)
 
 # ================= STL =================
@@ -123,7 +112,7 @@ if st.button("Generate STL"):
         st.error(f"STL generation failed: {e}")
 
 # ================= FLOW FIELD =================
-st.subheader("Flow Interaction Field (Denticle-Driven)")
+st.subheader("Flow Interaction Field")
 
 dZdx = np.gradient(Z, axis=1)
 dZdy = np.gradient(Z, axis=0)
@@ -135,21 +124,17 @@ velocity_field = np.sqrt(U**2 + V**2)
 
 fig_flow, ax_flow = plt.subplots()
 ax_flow.contourf(Xg, Yg, velocity_field, levels=30)
-ax_flow.set_title("Velocity Magnitude Variation")
 st.pyplot(fig_flow)
 
 # ================= FLOW VECTORS =================
 st.subheader("Flow Direction Field")
 
 step = 6
-
 fig_vec, ax_vec = plt.subplots()
 ax_vec.quiver(
     Xg[::step, ::step], Yg[::step, ::step],
-    U[::step, ::step], V[::step, ::step],
-    scale=30
+    U[::step, ::step], V[::step, ::step]
 )
-ax_vec.set_title("Flow Direction & Disturbance")
 st.pyplot(fig_vec)
 
 # ================= BIOFOULING =================
@@ -162,40 +147,4 @@ attachment_zone = low_flow & low_lotus
 
 fig_bio, ax_bio = plt.subplots()
 ax_bio.contourf(Xg, Yg, attachment_zone, levels=1)
-ax_bio.set_title("High Fouling Risk Zones")
 st.pyplot(fig_bio)
-
-# ================= DRAG CURVE =================
-st.subheader("Drag vs Velocity")
-
-vels = np.linspace(0.5, 12, 40)
-drag_curve = []
-
-for v in vels:
-    try:
-        X = build_input(v)
-        drag_curve.append(model.predict(X)[0][0])
-    except:
-        drag_curve.append(0)
-
-fig_drag, ax_drag = plt.subplots()
-ax_drag.plot(vels, drag_curve)
-st.pyplot(fig_drag)
-
-# ================= COMPARISON =================
-st.subheader("Surface Comparison")
-
-labels = ["Smooth", "Riblet", "Lotus", "Hybrid"]
-values = [40, 65, 60, pred[0] if pred is not None else 75]
-
-fig_comp, ax_comp = plt.subplots()
-ax_comp.bar(labels, values)
-st.pyplot(fig_comp)
-
-# ================= INSIGHT =================
-st.subheader("Engineering Insight")
-
-st.write("""
-This system integrates riblet-induced drag reduction, lotus-inspired nano-scale hydrophobicity,
-and predictive modeling to create a multi-scale, intelligent marine hull surface system.
-""")
