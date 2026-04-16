@@ -1,87 +1,58 @@
 import numpy as np
 from stl import mesh
 
-def generate_stl(riblet_spacing, riblet_height, resolution=120, thickness=0.05, mode="Visualization STL"):
+def generate_stl(riblet_spacing, riblet_height, lotus_intensity, resolution=80, mode="Visualization STL"):
 
-    # GRID (MUST MATCH APP)
+    np.random.seed(1)
+
     x = np.linspace(0, 5, resolution)
     y = np.linspace(0, 5, resolution)
-    X, Y = np.meshgrid(x, y)
+    Xg, Yg = np.meshgrid(x, y)
 
-    # SURFACE
-    riblets = riblet_height * np.sin((2*np.pi / riblet_spacing) * X)
-    lotus = 0.05 * np.cos(6*X) * np.cos(6*Y)
+    # Base hull
+    hull_base = 1 - (Yg**2) / (1.5**2)
+    hull_base = np.clip(hull_base, 0, 1)
 
-    Z_top = riblets + lotus
+    # Riblets
+    riblet = riblet_height * np.sin((2 * np.pi / riblet_spacing) * Xg)
 
-    # ==============================
-    # VISUALIZATION MODE (ONLY TOP)
-    # ==============================
-    if mode == "Visualization STL":
+    # Lotus nano-scale
+    nano_freq = 40
+    nano_amp = 0.08 * lotus_intensity
+    noise = 0.02 * np.random.randn(*Xg.shape)
 
-        vertices = np.column_stack((X.flatten(), Y.flatten(), Z_top.flatten()))
+    lotus = nano_amp * (np.cos(nano_freq * Xg) * np.cos(nano_freq * Yg)) + noise
 
-        nx, ny = X.shape
-        faces = []
+    Z = hull_base + riblet + lotus
 
-        for i in range(nx - 1):
-            for j in range(ny - 1):
-                v1 = i * ny + j
-                v2 = (i + 1) * ny + j
-                v3 = (i + 1) * ny + (j + 1)
-                v4 = i * ny + (j + 1)
+    # Build mesh
+    vertices = []
+    faces = []
 
-                faces.append([v1, v2, v3])
-                faces.append([v1, v3, v4])
+    for i in range(resolution - 1):
+        for j in range(resolution - 1):
 
-    # ==============================
-    # CFD MODE (TOP + FLAT BOTTOM)
-    # ==============================
-    else:
+            v0 = [Xg[i,j], Yg[i,j], Z[i,j]]
+            v1 = [Xg[i+1,j], Yg[i+1,j], Z[i+1,j]]
+            v2 = [Xg[i,j+1], Yg[i,j+1], Z[i,j+1]]
+            v3 = [Xg[i+1,j+1], Yg[i+1,j+1], Z[i+1,j+1]]
 
-        Z_bottom = np.zeros_like(Z_top)  # 🔥 FLAT (THIS FIXES YOUR ISSUE)
+            idx = len(vertices)
+            vertices.extend([v0, v1, v2, v3])
 
-        top_vertices = np.column_stack((X.flatten(), Y.flatten(), Z_top.flatten()))
-        bottom_vertices = np.column_stack((X.flatten(), Y.flatten(), Z_bottom.flatten()))
+            faces.append([idx, idx+1, idx+2])
+            faces.append([idx+1, idx+3, idx+2])
 
-        vertices = np.vstack((top_vertices, bottom_vertices))
-
-        nx, ny = X.shape
-        faces = []
-
-        # TOP
-        for i in range(nx - 1):
-            for j in range(ny - 1):
-                v1 = i * ny + j
-                v2 = (i + 1) * ny + j
-                v3 = (i + 1) * ny + (j + 1)
-                v4 = i * ny + (j + 1)
-
-                faces.append([v1, v2, v3])
-                faces.append([v1, v3, v4])
-
-        offset = nx * ny
-
-        # BOTTOM (FLAT + REVERSED NORMAL)
-        for i in range(nx - 1):
-            for j in range(ny - 1):
-                v1 = offset + i * ny + j
-                v2 = offset + (i + 1) * ny + j
-                v3 = offset + (i + 1) * ny + (j + 1)
-                v4 = offset + i * ny + (j + 1)
-
-                faces.append([v4, v3, v2])
-                faces.append([v4, v2, v1])
-
-    # BUILD STL
+    vertices = np.array(vertices)
     faces = np.array(faces)
-    surface = mesh.Mesh(np.zeros(len(faces), dtype=mesh.Mesh.dtype))
+
+    hull_mesh = mesh.Mesh(np.zeros(faces.shape[0], dtype=mesh.Mesh.dtype))
 
     for i, f in enumerate(faces):
         for j in range(3):
-            surface.vectors[i][j] = vertices[f[j]]
+            hull_mesh.vectors[i][j] = vertices[f[j],:]
 
     file_path = "biomimetic_hull.stl"
-    surface.save(file_path)
+    hull_mesh.save(file_path)
 
-    return X, Y, Z_top, file_path
+    return Xg, Yg, Z, file_path
