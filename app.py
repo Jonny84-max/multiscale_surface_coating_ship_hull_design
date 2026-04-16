@@ -3,7 +3,7 @@ import numpy as np
 import joblib
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
-from surface_3d_pattern import generate_stl   # ✅ FIXED IMPORT
+from surface_3d_pattern import generate_stl
 
 # ================= LOAD MODEL =================
 @st.cache_resource
@@ -13,7 +13,7 @@ def load_model():
 
 model, columns = load_model()
 
-# ================= FIXED MAPPINGS =================
+# ================= MAPPINGS =================
 material_map = {"GFRP": 0, "CFRP": 1, "Hybrid": 2}
 coating_map = {"Epoxy": 0, "Vinyl": 1, "PDMS": 2, "Fluoro": 3, "Sol-gel": 4}
 
@@ -71,35 +71,36 @@ if st.button("Run Simulation"):
     except Exception as e:
         st.error(f"Prediction failed: {e}")
 
-# ================= GRID =================
-resolution = 80   # ✅ lighter
+# ================= MULTISCALE SURFACE =================
+resolution = 100
 
 x = np.linspace(0, 5, resolution)
 y = np.linspace(0, 5, resolution)
 Xg, Yg = np.meshgrid(x, y)
 
-# ================= HULL =================
+# Base hull
 hull_base = 1 - (Yg**2) / (1.5**2)
 hull_base = np.clip(hull_base, 0, 1)
 
-# coating influence
-coating_factor = {
-    "Epoxy": 0.3,
-    "Vinyl": 0.4,
-    "PDMS": 0.9,
-    "Fluoro": 1.0,
-    "Sol-gel": 0.6
-}
-
+# Riblets (aligned with flow)
 riblet = riblet_height * np.sin((2 * np.pi / riblet_spacing) * Xg)
-lotus = lotus_intensity * coating_factor[coating] * (np.cos(8 * Xg) * np.cos(8 * Yg))
 
-Z = hull_base + riblet + 0.3 * lotus
+# Lotus nano-scale
+nano_freq = 40
+nano_amp = 0.08 * lotus_intensity
 
-# ================= 3D =================
-st.subheader("3D Biomimetic Hull Surface")
+np.random.seed(1)
+noise = 0.02 * np.random.randn(*Xg.shape)
 
-fig = go.Figure(data=[go.Surface(x=Xg, y=Yg, z=Z)])
+lotus = nano_amp * (np.cos(nano_freq * Xg) * np.cos(nano_freq * Yg)) + noise
+
+# Final surface
+Z = hull_base + riblet + lotus
+
+# ================= 3D PLOT =================
+st.subheader("3D Biomimetic Hull Surface (Multiscale)")
+
+fig = go.Figure(data=[go.Surface(x=Xg, y=Yg, z=Z, colorscale='Viridis')])
 st.plotly_chart(fig, use_container_width=True)
 
 # ================= STL =================
@@ -110,50 +111,59 @@ if st.button("Generate STL"):
         X_s, Y_s, Z_s, file_path = generate_stl(
             riblet_spacing,
             riblet_height,
-            lotus_intensity,   # ✅ now included
+            lotus_intensity,
             resolution=80,
             mode=mode
         )
 
         with open(file_path, "rb") as f:
-            st.download_button(
-                "Download STL",
-                f,
-                "biomimetic_hull.stl"
-            )
+            st.download_button("Download STL", f, "biomimetic_hull.stl")
 
     except Exception as e:
         st.error(f"STL generation failed: {e}")
 
-# ================= FLOW =================
-st.subheader("Relative Flow Pattern")
+# ================= FLOW FIELD =================
+st.subheader("Flow Interaction Field (Denticle-Driven)")
 
-velocity_field = 1 / (1 + np.abs(Z))
+dZdx = np.gradient(Z, axis=1)
+dZdy = np.gradient(Z, axis=0)
+
+U = 1 - np.abs(dZdx) * 2
+V = -dZdy * 0.5
+
+velocity_field = np.sqrt(U**2 + V**2)
 
 fig_flow, ax_flow = plt.subplots()
-ax_flow.contourf(Xg, Yg, velocity_field, levels=25)
+ax_flow.contourf(Xg, Yg, velocity_field, levels=30)
+ax_flow.set_title("Velocity Magnitude Variation")
 st.pyplot(fig_flow)
-
-# ================= BIOFOULING =================
-st.subheader("Biofouling Zones")
-
-attachment_zone = (np.abs(Z) < 0.2) & (velocity_field < 0.8)
-
-fig_bio, ax_bio = plt.subplots()
-ax_bio.contourf(Xg, Yg, attachment_zone, levels=1)
-st.pyplot(fig_bio)
 
 # ================= FLOW VECTORS =================
 st.subheader("Flow Direction Field")
 
-step = 8
-U = -np.gradient(Z, axis=1)
-V = -np.gradient(Z, axis=0)
+step = 6
 
 fig_vec, ax_vec = plt.subplots()
-ax_vec.quiver(Xg[::step, ::step], Yg[::step, ::step],
-              U[::step, ::step], V[::step, ::step])
+ax_vec.quiver(
+    Xg[::step, ::step], Yg[::step, ::step],
+    U[::step, ::step], V[::step, ::step],
+    scale=30
+)
+ax_vec.set_title("Flow Direction & Disturbance")
 st.pyplot(fig_vec)
+
+# ================= BIOFOULING =================
+st.subheader("Biofouling Risk Zones")
+
+low_flow = velocity_field < np.percentile(velocity_field, 40)
+low_lotus = np.abs(lotus) < np.percentile(np.abs(lotus), 40)
+
+attachment_zone = low_flow & low_lotus
+
+fig_bio, ax_bio = plt.subplots()
+ax_bio.contourf(Xg, Yg, attachment_zone, levels=1)
+ax_bio.set_title("High Fouling Risk Zones")
+st.pyplot(fig_bio)
 
 # ================= DRAG CURVE =================
 st.subheader("Drag vs Velocity")
@@ -186,7 +196,6 @@ st.pyplot(fig_comp)
 st.subheader("Engineering Insight")
 
 st.write("""
-This system integrates riblet-induced drag reduction, lotus-effect hydrophobicity,
-and nano-composite material optimization with predictive modeling for enhanced
-marine hull performance.
+This system integrates riblet-induced drag reduction, lotus-inspired nano-scale hydrophobicity,
+and predictive modeling to create a multi-scale, intelligent marine hull surface system.
 """)
