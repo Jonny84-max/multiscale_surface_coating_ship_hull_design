@@ -4,8 +4,6 @@ import joblib
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 
-from surface_3d_pattern import generate_stl
-
 # ================= LOAD MODEL =================
 data = joblib.load("model.pkl")
 model = data["model"]
