@@ -34,7 +34,7 @@ time = st.sidebar.slider("Time (days)", 1, 1095)
 material = st.sidebar.selectbox("Material", list(material_map.keys()))
 coating = st.sidebar.selectbox("Coating", list(coating_map.keys()))
 mode = st.sidebar.selectbox("Output Mode", ["Visualization STL", "CFD STL"])
-st.write(f"Simulation Time Horizon: {time} days")
+
 
 # ================= FEATURE BUILDER =================
 def build_input(v):
