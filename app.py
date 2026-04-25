@@ -76,7 +76,7 @@ if st.button("Run Simulation"):
         for t in range(1, days_input + 1):
             
             # 1. Build input for current day 't'
-            X = build_input(velocity)
+            X = build_input(velocity, t)
             X.loc[0, "time"] = t  # Force the model to see the passage of time
             
             # 2. Get Raw Prediction
