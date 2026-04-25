@@ -3,6 +3,7 @@ import numpy as np
 import joblib
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
+import time
 from surface_3d_pattern import generate_stl
 
 # ================= LOAD MODEL =================
@@ -34,6 +35,9 @@ time = st.sidebar.slider("Time (days)", 1, 1095)
 material = st.sidebar.selectbox("Material", list(material_map.keys()))
 coating = st.sidebar.selectbox("Coating", list(coating_map.keys()))
 mode = st.sidebar.selectbox("Output Mode", ["Visualization STL", "CFD STL"])
+time_display = st.empty()
+run_sim = st.sidebar.checkbox("Run Time Simulation")
+speed = st.sidebar.slider("Simulation Speed (sec per step)", 0.1, 2.0, 0.5)
 
 
 # ================= FEATURE BUILDER =================
@@ -56,32 +60,49 @@ pred = None
 
 if st.button("Run Simulation"):
     try:
-        X = build_input(velocity)
-        pred = model.predict(X)
+        if run_sim:
+            for t in range(1, time + 1):
+                time_display.write(f"Simulation Day: {t}")
 
-        if len(pred[0]) >= 4:
-            pred = pred[0]
-            
-            # ===== CLIP VALUES (prevents negative nonsense) =====
+                X = build_input(velocity)
+                X[0][columns.index("time")] = t  # update time dynamically
+
+                pred = model.predict(X)[0]
+
+                drag = max(pred[0], 0)
+                bio = np.clip(pred[1], 0, 1)
+                hydro = max(pred[2], 0)
+                durability = max(pred[3], 0)
+
+                st.subheader("Performance Results")
+                st.metric("Drag Reduction", f"{drag:.2f} %")
+                st.metric("Biofouling Risk Index", f"{bio:.2f} (0–1)")
+                st.metric("Hydrophobicity (Contact Angle)", f"{hydro:.2f} °")
+                st.metric("Durability Index", f"{durability:.2f} (relative)")
+
+                time.sleep(speed)
+
+        else:
+            # fallback to normal single prediction
+            X = build_input(velocity)
+            pred = model.predict(X)[0]
+
             drag = max(pred[0], 0)
             bio = np.clip(pred[1], 0, 1)
             hydro = max(pred[2], 0)
             durability = max(pred[3], 0)
 
-            st.subheader("Performance Results")   # METRICS WITH UNITS
+            time_display.write(f"Simulation Day: {time}")
+
+            st.subheader("Performance Results")
             st.metric("Drag Reduction", f"{drag:.2f} %")
             st.metric("Biofouling Risk Index", f"{bio:.2f} (0–1)")
             st.metric("Hydrophobicity (Contact Angle)", f"{hydro:.2f} °")
             st.metric("Durability Index", f"{durability:.2f} (relative)")
-            
-            # ===== INTERPRETATION NOTE =====
-            st.caption("Biofouling risk is normalized: 0 = low risk, 1 = high risk.")
-        else:
-            st.error("Model output format mismatch")
 
     except Exception as e:
         st.error(f"Prediction failed: {e}")
-
+        
 # ================= MULTISCALE SURFACE =================
 resolution = 100
 
@@ -132,6 +153,22 @@ if st.button("Generate STL"):
 
     except Exception as e:
         st.error(f"STL generation failed: {e}")
+
+# ================= Time evolution curve =================
+times = np.arange(1, time + 1)
+bio_curve = []
+
+for t in times:
+    X = build_input(velocity)
+    X[0][columns.index("time")] = t
+    bio_curve.append(model.predict(X)[0][1])
+
+fig_time, ax_time = plt.subplots()
+ax_time.plot(times, bio_curve)
+ax_time.set_title("Biofouling Risk Over Time")
+ax_time.set_xlabel("Days")
+ax_time.set_ylabel("Risk Index")
+st.pyplot(fig_time)
 
 # ================= FLOW FIELD =================
 st.subheader("Flow Interaction Field (Denticle-Driven)")
