@@ -58,6 +58,8 @@ def build_input(v):
     df = pd.DataFrame([input_dict])
     return df[columns]
 
+# ================= MODEL EXECUTION =================
+pred = None
 if st.button("Run Simulation"):
     try:
         progress = st.progress(0)
@@ -225,14 +227,27 @@ st.pyplot(fig_drag)
 
 # ================= COMPARISON =================
 st.subheader("Surface Comparison")
+
 labels = ["Smooth", "Riblet", "Lotus", "Hybrid"]
-# Use current prediction if available, else a baseline
-current_drag = max(pred[0], 0) if pred is not None else 75
+
+# Logic to handle if pred is None (initial load) or has data
+if pred is not None:
+    current_drag = max(pred[0], 0)
+else:
+    # Use a default baseline value (e.g., 50 or 0) until simulation runs
+    current_drag = 0 
+
 values = [40, 65, 60, current_drag]
 
 fig_comp, ax_comp = plt.subplots()
 ax_comp.bar(labels, values, color=['gray', 'blue', 'green', 'orange'])
-ax_comp.set_ylabel("Efficiency Score")
+ax_comp.set_ylabel("Efficiency Score / Drag Reduction %")
+ax_comp.set_ylim(0, 100) # Keep scale consistent
+
+# Optional: Add a text warning if simulation hasn't run
+if pred is None:
+    ax_comp.text(3, 10, "Run Simulation\nto see Hybrid", 
+                 ha='center', color='red', fontsize=8)
 st.pyplot(fig_comp)
 
 # ================= INSIGHT =================
