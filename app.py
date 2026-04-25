@@ -60,57 +60,75 @@ def build_input(v, t_val):
     # Enforce column order from your model loading
     return df[columns] 
 
-# ================= FIXED SIMULATION LOOP =================
-pred = None
+# ================= MODEL EXECUTION =================
+# Initialize pred as a baseline so the app doesn't crash on load
+pred = [0, 0, 0, 0] 
+
 if st.button("Run Simulation"):
     try:
-        progress = st.progress(0)
-        cumulative_bio = 0
-        results_area = st.empty() 
-
-        for t in range(1, days_input + 1):
-            # 1. Build input with the current day 't'
-            X = build_input(velocity, t)
-            
-            # 2. Get prediction
-            pred = model.predict(X)[0]
-            
-            # 3. Map predictions (Check these indices against your training!)
-            # Clipping drag at 99% because you can't have negative drag
-            drag = np.clip(pred[0], 0, 99) 
-            
-            # If your model returns 0, let's check if we need to 
-            # simulate a baseline if the ML model is 'cold'
-            daily_bio_pred = pred[1] 
-            
-            # Physics Check: If daily_bio is consistently 0, the model 
-            # might need more 'Time' or 'Temperature' to trigger fouling
-            cumulative_bio += daily_bio_pred * 0.05
-            bio_display = min(cumulative_bio, 1.0)
-            
-            hydro = pred[2]
-            durability = pred[3]
+        # Placeholder for the single, updating results card
+        results_card = st.empty()
+        progress_bar = st.progress(0)
         
-            # 4. Update UI
-            with results_area.container():
-                st.subheader(f"📊 Live Performance: Day {t}")
-                c1, c2, c3, c4 = st.columns(4)
-                
-                # Use deltas to show if the hull is degrading or fouling
-                c1.metric("Drag Reduc.", f"{drag:.1f}%")
-                c2.metric("Bio-Risk", f"{bio_display:.2f}", delta=f"{daily_bio_pred:.4f}")
-                c3.metric("Contact Angle", f"{hydro:.1f}°")
-                c4.metric("Durability", f"{durability:.2f}")
+        cumulative_bio = 0
+        
+        # This loop handles the "Progressive Days"
+        for t in range(1, days_input + 1):
+            
+            # 1. Build input for current day 't'
+            X = build_input(velocity)
+            X.loc[0, "time"] = t  # Force the model to see the passage of time
+            
+            # 2. Get Raw Prediction
+            raw_pred = model.predict(X)[0]
+            
+            # 3. Apply Physical Constraints (No negatives!)
+            drag_red = np.clip(raw_pred[0], 0, 95) # Max 95% reduction
+            
+            # Daily biofouling risk (should be 0-1)
+            daily_risk = max(0, raw_pred[1]) 
+            cumulative_bio += daily_risk * 0.02 # Accumulate over time
+            total_bio = min(1.0, cumulative_bio)
+            
+            # Contact Angle (If your model is weak, we simulate texture wear)
+            # Surface texture wears out as time 't' increases
+            wear_factor = max(0.5, 1 - (t / 2000)) 
+            hydro = max(0, raw_pred[2] * wear_factor)
+            
+            # Durability (cannot be negative)
+            durability = max(0, raw_pred[3])
 
-            progress.progress(t / days_input)
+            # 4. Display in the same block (Overwrites previous day)
+            with results_card.container():
+                st.subheader(f"📊 Hull Performance Analysis: Day {t}")
+                
+                # Visual Indicator for SHS status
+                if hydro > 150:
+                    st.success("✨ Surface Status: Superhydrophobic (SHS)")
+                elif hydro > 90:
+                    st.info("💧 Surface Status: Hydrophobic")
+                else:
+                    st.warning("⚠️ Surface Status: Hydrophilic (High Drag)")
+
+                c1, c2, c3, c4 = st.columns(4)
+                c1.metric("Drag Reduc.", f"{drag_red:.1f}%")
+                c2.metric("Bio-Accumulation", f"{total_bio:.2f}", delta=f"{daily_risk:.3f}")
+                c3.metric("Contact Angle", f"{hydro:.1f}°")
+                c4.metric("Durability", f"{durability:.0f} pts")
+
+            # Update progress bar
+            progress_bar.progress(t / days_input)
+            
+            # Simulation Speed
             if run_sim:
                 time_lib.sleep(speed)
             else:
+                # If "Run Time Simulation" is off, show the target day and stop
                 break
 
     except Exception as e:
         st.error(f"Prediction Error: {e}")
-
+    
 # ================= MULTISCALE SURFACE GENERATION =================
 resolution = 100
 x = np.linspace(0, 5, resolution)
