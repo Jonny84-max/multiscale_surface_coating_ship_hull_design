@@ -67,17 +67,17 @@ if st.button("Run Simulation"):
         cumulative_bio = 0
         for t in range(1, days_input + 1):
             time_display.write(f"Simulation Day: {t}")
-	    progress.progress(t / time_days)
+	    	progress.progress(t / time_days)
 
             X = build_input(velocity, t)
             X.loc[0, "time"] = t
-	    pred = model.predict(X)[0]
+	    	pred = model.predict(X)[0]
                 
-	    drag = max(pred[0], 0)
+	    	drag = max(pred[0], 0)
             daily_bio = np.clip(pred[1], 0, 1)
             
 		# cumulative biofouling growth   
-	    cumulative_bio += daily_bio * 0.05
+	    	cumulative_bio += daily_bio * 0.05
             bio = min(cumulative_bio, 1)
             hydro = max(pred[2], 0)
             durability = max(pred[3], 0)
