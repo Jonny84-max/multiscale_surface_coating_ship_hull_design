@@ -11,7 +11,6 @@ from surface_3d_pattern import generate_stl
 @st.cache_resource
 def load_model():
     try:
-        # Using the specific filename from your environment
         data = joblib.load("shs_predictive_model.pkl")
         if isinstance(data, dict) and "model" in data:
             return data["model"], data.get("columns", None)
@@ -48,19 +47,18 @@ mode = st.sidebar.selectbox("Output Mode", ["Visualization STL", "CFD STL"])
 run_sim = st.sidebar.checkbox("Run Time Simulation")
 speed = st.sidebar.slider("Simulation Speed (sec per step)", 0.1, 1.5, 0.4)
 
-# Initialize session state for persistent results
 if 'pred' not in st.session_state:
     st.session_state.pred = None
 
-# ================= FIXED FEATURE BUILDER =================
+# ================= DYNAMIC FEATURE ALIGNER =================
 def build_input(v, t_val):
-    # Calculate engineered features to match the physics dataset training
+    # 1. Calculate all possible physics features
     asp = riblet_height / (riblet_spacing + 1e-6)
     f = 1 / (1 + asp)
     cos_theta = -1 + f * (np.cos(np.radians(110)) + 1)
     ca = np.degrees(np.arccos(np.clip(cos_theta, -1, 1)))
     
-    input_dict = {
+    full_data = {
         "riblet_height": riblet_height,
         "riblet_spacing": riblet_spacing,
         "lotus_intensity": lotus_intensity,
@@ -79,14 +77,28 @@ def build_input(v, t_val):
         "estimated_slip_length": (1 / (np.sqrt(f) + 1e-6)) * riblet_spacing
     }
     
-    df = pd.DataFrame([input_dict])
+    df = pd.DataFrame([full_data])
     
-    # Ensure column alignment with the loaded model
-    if columns is not None:
-        for col in columns:
-            if col not in df.columns:
-                df[col] = 0
-        return df[columns]
+    # 2. IDENTIFY REQUIRED COLUMNS: Ask the model what it wants
+    if model is not None:
+        if hasattr(model, 'feature_names_in_'):
+            required_cols = list(model.feature_names_in_)
+        elif columns is not None:
+            required_cols = columns
+        else:
+            # Emergency fallback to base features
+            required_cols = ["riblet_height", "riblet_spacing", "lotus_intensity", "velocity", "time"]
+
+        # 3. SELECT AND REORDER: Only take what the model recognizes
+        # If a required column is missing from our dict, we initialize it as 0
+        final_df = pd.DataFrame()
+        for col in required_cols:
+            if col in df.columns:
+                final_df[col] = df[col]
+            else:
+                final_df[col] = [0.0]
+        return final_df
+    
     return df
 
 # ================= MODEL EXECUTION =================
@@ -105,14 +117,13 @@ if st.button("Run Simulation"):
                 X = build_input(velocity, t)
                 raw_pred = model.predict(X)[0]
                 
-                # Check if multi-output or scalar
+                # Check for scalar vs array prediction
                 if isinstance(raw_pred, (list, np.ndarray)) and len(raw_pred) >= 4:
                     d_raw, b_raw, h_raw, dur_raw = raw_pred[0], raw_pred[1], raw_pred[2], raw_pred[3]
                 else:
                     d_raw = raw_pred if np.isscalar(raw_pred) else raw_pred[0]
-                    b_raw, h_raw, dur_raw = 0.05, 110.0, 75.0 # Fallbacks
+                    b_raw, h_raw, dur_raw = 0.05, 110.0, 75.0 
                 
-                # Apply physics constraints
                 drag_red = np.clip(d_raw, 0, 95)
                 daily_risk = max(0, b_raw)
                 cumulative_bio += daily_risk * 0.02
@@ -121,7 +132,6 @@ if st.button("Run Simulation"):
                 hydro = max(0, h_raw * wear_factor)
                 durability = max(0, dur_raw)
 
-                # Store result in session state for comparison plot
                 st.session_state.pred = [drag_red, total_bio, hydro, durability]
 
                 with results_card.container():
@@ -146,16 +156,14 @@ resolution = 100
 x = np.linspace(0, 5, resolution)
 y = np.linspace(0, 5, resolution)
 Xg, Yg = np.meshgrid(x, y)
-
 hull_base = np.clip(1 - (Yg**2) / (1.5**2), 0, 1)
 riblet = riblet_height * np.sin((2 * np.pi / riblet_spacing) * Xg)
 nano_amp = 0.08 * lotus_intensity
 lotus = nano_amp * (np.cos(40 * Xg) * np.cos(40 * Yg)) + (0.02 * np.random.randn(resolution, resolution))
 Z = hull_base + riblet + lotus
 
-# ================= 3D PLOT =================
 st.subheader("3D Biomimetic Hull Surface (Multiscale)")
-st.plotly_chart(go.Figure(data=[go.Surface(x=Xg, y=Yg, z=Z, colorscale='Viridis')]), use_container_width=True)
+st.plotly_chart(go.Figure(data=[go.Surface(x=Xg, y=Yg, z=Z, colorscale='Viridis')]), width='stretch')
 
 # ================= FLOW ANALYSIS =================
 col_f1, col_f2 = st.columns(2)
@@ -166,8 +174,7 @@ velocity_field = np.sqrt(U**2 + V**2)
 with col_f1:
     st.subheader("Flow Interaction Field")
     fig_flow, ax_flow = plt.subplots()
-    cf = ax_flow.contourf(Xg, Yg, velocity_field, levels=30, cmap='RdYlBu_r')
-    plt.colorbar(cf, ax=ax_flow)
+    ax_flow.contourf(Xg, Yg, velocity_field, levels=30, cmap='RdYlBu_r')
     st.pyplot(fig_flow)
 
 with col_f2:
@@ -185,7 +192,8 @@ for v in vels:
     try:
         X_v = build_input(v, days_input)
         p = model.predict(X_v)[0]
-        drag_curve.append(max(p[0] if not np.isscalar(p) else p, 0))
+        drag_val = p[0] if not np.isscalar(p) else p
+        drag_curve.append(max(drag_val, 0))
     except: drag_curve.append(0)
 
 fig_drag, ax_drag = plt.subplots()
@@ -213,9 +221,9 @@ st.info("This system integrates riblet-induced drag reduction and lotus-inspired
 
 if st.button("Show Engineering Interpretation"):
     st.write("""
-    - **Riblets:** Control boundary layer flow to reduce turbulent drag.
-    - **Lotus Effect:** Nano-textures minimize the liquid-solid contact area, preventing bio-adhesion.
-    - **Hybrid Advantage:** The combination addresses both fluid dynamics (short term) and fouling (long term).
+    - **Riblets:** Control boundary layer flow to reduce turbulent drag by minimizing cross-stream vortex motion.
+    - **Lotus Effect:** Nano-textures minimize the liquid-solid contact area (Cassie-Baxter state), preventing bio-adhesion.
+    - **Hybrid Advantage:** Combined geometric and chemical properties address both fluid dynamics and biological fouling.
     """)
 
 # ================= STL EXPORT =================
