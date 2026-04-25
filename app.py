@@ -53,7 +53,8 @@ def build_input(v):
         "material": material_map[material],
         "coating": coating_map[coating]
     }
-    return np.array([[input_dict[col] for col in columns]])
+
+    return pd.DataFrame([input_dict])  # 👈 THIS FIXES WARNING
 
 # ================= MODEL =================
 pred = None
@@ -102,6 +103,28 @@ if st.button("Run Simulation"):
 
     except Exception as e:
         st.error(f"Prediction failed: {e}")
+
+# ================= BIOFOULING OVER TIME =================
+st.subheader("Biofouling Risk Over Time")
+
+times = np.arange(1, time + 1)
+bio_curve = []
+
+for t in times:
+    try:
+        X = build_input(velocity)
+        X[0][columns.index("time")] = t  # update time
+        pred_t = model.predict(X)[0][1]  # biofouling output
+        bio_curve.append(np.clip(pred_t, 0, 1))
+    except:
+        bio_curve.append(0)
+
+fig_time, ax_time = plt.subplots()
+ax_time.plot(times, bio_curve)
+ax_time.set_title("Biofouling Risk Over Time")
+ax_time.set_xlabel("Days")
+ax_time.set_ylabel("Risk Index (0–1)")
+st.pyplot(fig_time)
         
 # ================= MULTISCALE SURFACE =================
 resolution = 100
@@ -153,22 +176,6 @@ if st.button("Generate STL"):
 
     except Exception as e:
         st.error(f"STL generation failed: {e}")
-
-# ================= Time evolution curve =================
-times = np.arange(1, time + 1)
-bio_curve = []
-
-for t in times:
-    X = build_input(velocity)
-    X[0][columns.index("time")] = t
-    bio_curve.append(model.predict(X)[0][1])
-
-fig_time, ax_time = plt.subplots()
-ax_time.plot(times, bio_curve)
-ax_time.set_title("Biofouling Risk Over Time")
-ax_time.set_xlabel("Days")
-ax_time.set_ylabel("Risk Index")
-st.pyplot(fig_time)
 
 # ================= FLOW FIELD =================
 st.subheader("Flow Interaction Field (Denticle-Driven)")
