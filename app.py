@@ -42,8 +42,9 @@ speed = st.sidebar.slider("Simulation Speed (sec per step)", 0.1, 1.5, 0.4)
 
 time_display = st.empty()
 
-# ================= FEATURE BUILDER =================
-def build_input(v):
+# ================= FIXED FEATURE BUILDER =================
+def build_input(v, t_val):
+    # Ensure these variables match exactly what the model was trained on
     input_dict = {
         "riblet_height": riblet_height,
         "riblet_spacing": riblet_spacing,
@@ -51,90 +52,64 @@ def build_input(v):
         "velocity": v,
         "temperature": temperature,
         "salinity": salinity,
-        "time": 0,
+        "time": t_val,
         "material": material_map[material],
         "coating": coating_map[coating]
     }
     df = pd.DataFrame([input_dict])
-    return df[columns]
+    # Enforce column order from your model loading
+    return df[columns] 
 
-# ================= MODEL EXECUTION =================
-pred = None
+# ================= FIXED SIMULATION LOOP =================
 if st.button("Run Simulation"):
     try:
         progress = st.progress(0)
         cumulative_bio = 0
-        
-        # --- NEW: Create a placeholder for the results ---
-        # This prevents the "rough" list by overwriting the same spot
         results_area = st.empty() 
 
         for t in range(1, days_input + 1):
-            time_display.write(f"### 🗓️ Simulation Day: {t}")
-            progress.progress(t / days_input)
-
-            X = build_input(velocity)
-            X.loc[0, "time"] = t
+            # 1. Build input with the current day 't'
+            X = build_input(velocity, t)
+            
+            # 2. Get prediction
             pred = model.predict(X)[0]
-                
-            drag = max(pred[0], 0)
-            daily_bio = np.clip(pred[1], 0, 1)
-            cumulative_bio += daily_bio * 0.05
-            bio = min(cumulative_bio, 1)
-            hydro = max(pred[2], 0)
-            durability = max(pred[3], 0)
+            
+            # 3. Map predictions (Check these indices against your training!)
+            # Clipping drag at 99% because you can't have negative drag
+            drag = np.clip(pred[0], 0, 99) 
+            
+            # If your model returns 0, let's check if we need to 
+            # simulate a baseline if the ML model is 'cold'
+            daily_bio_pred = pred[1] 
+            
+            # Physics Check: If daily_bio is consistently 0, the model 
+            # might need more 'Time' or 'Temperature' to trigger fouling
+            cumulative_bio += daily_bio_pred * 0.05
+            bio_display = min(cumulative_bio, 1.0)
+            
+            hydro = pred[2]
+            durability = pred[3]
         
-            # --- NEW: Update the placeholder area ---
+            # 4. Update UI
             with results_area.container():
-                st.subheader(f"Live Performance Tracking")
-                col1, col2 = st.columns(2)
+                st.subheader(f"📊 Live Performance: Day {t}")
+                c1, c2, c3, c4 = st.columns(4)
                 
-                with col1:
-                    st.metric("Drag Reduction", f"{drag:.2f} %", delta=f"{drag - 50:.2f}% vs baseline")
-                    st.metric("Biofouling Accumulation", f"{bio:.2f}", delta=f"{daily_bio:.3f} daily increase", delta_color="inverse")
-                
-                with col2:
-                    st.metric("Contact Angle", f"{hydro:.2f} °")
-                    st.metric("Durability Index", f"{durability:.2f}")
+                # Use deltas to show if the hull is degrading or fouling
+                c1.metric("Drag Reduc.", f"{drag:.1f}%")
+                c2.metric("Bio-Risk", f"{bio_display:.2f}", delta=f"{daily_bio_pred:.4f}")
+                c3.metric("Contact Angle", f"{hydro:.1f}°")
+                c4.metric("Durability", f"{durability:.2f}")
 
-            # Control simulation speed
+            progress.progress(t / days_input)
             if run_sim:
                 time_lib.sleep(speed)
             else:
-                # If "Run Time Simulation" is unchecked, we just show the final day and stop
                 break
 
     except Exception as e:
-        st.error(f"Prediction failed: {e}")
+        st.error(f"Prediction Error: {e}")
 
-# ================= BIOFOULING OVER TIME =================
-st.subheader("Biofouling Risk Over Time")
-
-times = np.arange(1, days_input + 1)
-bio_curve = []
-cumulative = 0
-
-for t in times:
-    try:
-        X = build_input(velocity)
-        X.loc[0, "time"] = t
-
-        pred_vals = model.predict(X)
-        daily_bio = np.clip(pred_vals[0][1], 0, 1)
-
-        cumulative += daily_bio * 0.05
-        bio_curve.append(min(cumulative, 1))
-    
-    except:
-        bio_curve.append(0)
-
-fig_time, ax_time = plt.subplots()
-ax_time.plot(times, bio_curve, color='teal')
-ax_time.set_title("Biofouling Risk Projection")
-ax_time.set_xlabel("Days")
-ax_time.set_ylabel("Risk Index (0–1)")
-st.pyplot(fig_time)
-        
 # ================= MULTISCALE SURFACE GENERATION =================
 resolution = 100
 x = np.linspace(0, 5, resolution)
