@@ -1,6 +1,7 @@
 import streamlit as st
 import numpy as np
 import joblib
+import pandas as pd
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import time
@@ -54,7 +55,8 @@ def build_input(v):
         "coating": coating_map[coating]
     }
 
-    return pd.DataFrame([input_dict])  # 👈 THIS FIXES WARNING
+    df = pd.DataFrame([input_dict])
+    return df[columns]  # 🔥 CRITICAL: enforce same order as training
 
 # ================= MODEL =================
 pred = None
@@ -62,25 +64,29 @@ pred = None
 if st.button("Run Simulation"):
     try:
         if run_sim:
+            cumulative_bio = 0
             for t in range(1, time + 1):
                 time_display.write(f"Simulation Day: {t}")
 
                 X = build_input(velocity)
-                X[0][columns.index("time")] = t  # update time dynamically
-
+                X.loc[0, "time"] = t # update time dynamically
+                
                 pred = model.predict(X)[0]
-
                 drag = max(pred[0], 0)
-                bio = np.clip(pred[1], 0, 1)
+                daily_bio = np.clip(pred[1], 0, 1)
+                #  CUMULATIVE EFFECT
+                cumulative_bio += daily_bio * 0.05
+                bio = min(cumulative_bio, 1)
                 hydro = max(pred[2], 0)
                 durability = max(pred[3], 0)
 
                 st.subheader("Performance Results")
                 st.metric("Drag Reduction", f"{drag:.2f} %")
+                st.metric("Drag Reduction", f"{drag:.2f} %", delta=f"{drag-50:.2f}% vs baseline")
                 st.metric("Biofouling Risk Index", f"{bio:.2f} (0–1)")
                 st.metric("Hydrophobicity (Contact Angle)", f"{hydro:.2f} °")
                 st.metric("Durability Index", f"{durability:.2f} (relative)")
-
+                
                 time.sleep(speed)
 
         else:
@@ -156,7 +162,8 @@ Z = hull_base + riblet + lotus
 st.subheader("3D Biomimetic Hull Surface (Multiscale)")
 
 fig = go.Figure(data=[go.Surface(x=Xg, y=Yg, z=Z, colorscale='Viridis')])
-st.plotly_chart(fig, use_container_width=True)
+
+st.plotly_chart(fig, width='stretch')
 
 # ================= STL =================
 st.subheader("Export STL for SimScale")
