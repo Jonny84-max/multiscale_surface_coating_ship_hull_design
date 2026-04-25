@@ -31,15 +31,16 @@ lotus_intensity = st.sidebar.slider("Lotus Intensity", 0.0, 1.0)
 velocity = st.sidebar.slider("Velocity", 0.5, 12.0)
 temperature = st.sidebar.slider("Temperature", 0, 40)
 salinity = st.sidebar.slider("Salinity", 10, 40)
-time = st.sidebar.slider("Time (days)", 1, 1095)
+time_days = st.sidebar.slider("Time (days)", 1, 365)
 
 material = st.sidebar.selectbox("Material", list(material_map.keys()))
 coating = st.sidebar.selectbox("Coating", list(coating_map.keys()))
 mode = st.sidebar.selectbox("Output Mode", ["Visualization STL", "CFD STL"])
-time_display = st.empty()
-run_sim = st.sidebar.checkbox("Run Time Simulation")
-speed = st.sidebar.slider("Simulation Speed (sec per step)", 0.1, 2.0, 0.5)
 
+run_sim = st.sidebar.checkbox("Run Time Simulation")
+speed = st.sidebar.slider("Simulation Speed (sec per step)", 0.1, 1.5, 0.3)
+
+time_display = st.empty()
 
 # ================= FEATURE BUILDER =================
 def build_input(v):
@@ -50,103 +51,99 @@ def build_input(v):
         "velocity": v,
         "temperature": temperature,
         "salinity": salinity,
-        "time": time,
+        "time": 0,
         "material": material_map[material],
         "coating": coating_map[coating]
     }
 
     df = pd.DataFrame([input_dict])
-    return df[columns]  # 🔥 CRITICAL: enforce same order as training
+    return df[columns]  # ensures correct order
 
-# ================= MODEL =================
-pred = None
-
+# ================= SIMULATION =================
 if st.button("Run Simulation"):
+
     try:
-        if run_sim:
-            cumulative_bio = 0
-            for t in range(1, time + 1):
-                time_display.write(f"Simulation Day: {t}")
+        progress = st.progress(0)
 
-                X = build_input(velocity)
-                X.loc[0, "time"] = t # update time dynamically
-                
-                pred = model.predict(X)[0]
-                drag = max(pred[0], 0)
-                daily_bio = np.clip(pred[1], 0, 1)
-                #  CUMULATIVE EFFECT
-                cumulative_bio += daily_bio * 0.05
-                bio = min(cumulative_bio, 1)
-                hydro = max(pred[2], 0)
-                durability = max(pred[3], 0)
+        cumulative_bio = 0
 
-                st.subheader("Performance Results")
-                st.metric("Drag Reduction", f"{drag:.2f} %")
-                st.metric("Drag Reduction", f"{drag:.2f} %", delta=f"{drag-50:.2f}% vs baseline")
-                st.metric("Biofouling Risk Index", f"{bio:.2f} (0–1)")
-                st.metric("Hydrophobicity (Contact Angle)", f"{hydro:.2f} °")
-                st.metric("Durability Index", f"{durability:.2f} (relative)")
-                
-                time.sleep(speed)
+        for t in range(1, time_days + 1):
 
-        else:
-            # fallback to normal single prediction
+            time_display.write(f"Simulation Day: {t}")
+            progress.progress(t / time_days)
+
             X = build_input(velocity)
+            X.loc[0, "time"] = t
+
             pred = model.predict(X)[0]
 
             drag = max(pred[0], 0)
-            bio = np.clip(pred[1], 0, 1)
+            daily_bio = np.clip(pred[1], 0, 1)
+
+            # cumulative biofouling growth
+            cumulative_bio += daily_bio * 0.05
+            bio = min(cumulative_bio, 1)
+
             hydro = max(pred[2], 0)
             durability = max(pred[3], 0)
 
-            time_display.write(f"Simulation Day: {time}")
-
             st.subheader("Performance Results")
-            st.metric("Drag Reduction", f"{drag:.2f} %")
-            st.metric("Biofouling Risk Index", f"{bio:.2f} (0–1)")
+
+            st.metric(
+                "Drag Reduction",
+                f"{drag:.2f} %",
+                delta=f"{drag - 50:.2f}% vs baseline"
+            )
+
+            st.metric("Biofouling Accumulation", f"{bio:.2f} (0–1)")
             st.metric("Hydrophobicity (Contact Angle)", f"{hydro:.2f} °")
-            st.metric("Durability Index", f"{durability:.2f} (relative)")
+            st.metric("Durability Index", f"{durability:.2f}")
+
+            if run_sim:
+                time.sleep(speed)
 
     except Exception as e:
         st.error(f"Prediction failed: {e}")
 
 # ================= BIOFOULING OVER TIME =================
-st.subheader("Biofouling Risk Over Time")
+st.subheader("Cumulative Biofouling Growth")
 
-times = np.arange(1, time + 1)
+times = np.arange(1, time_days + 1)
 bio_curve = []
+cumulative = 0
 
 for t in times:
     try:
         X = build_input(velocity)
-        X[0][columns.index("time")] = t  # update time
-        pred_t = model.predict(X)[0][1]  # biofouling output
-        bio_curve.append(np.clip(pred_t, 0, 1))
+        X.loc[0, "time"] = t
+
+        pred_vals = model.predict(X)
+        daily_bio = np.clip(pred_vals[0][1], 0, 1)
+
+        cumulative += daily_bio * 0.05
+        bio_curve.append(min(cumulative, 1))
+
     except:
         bio_curve.append(0)
 
 fig_time, ax_time = plt.subplots()
 ax_time.plot(times, bio_curve)
-ax_time.set_title("Biofouling Risk Over Time")
+ax_time.set_title("Cumulative Biofouling Risk Over Time")
 ax_time.set_xlabel("Days")
-ax_time.set_ylabel("Risk Index (0–1)")
+ax_time.set_ylabel("Accumulated Risk (0–1)")
 st.pyplot(fig_time)
-        
+
 # ================= MULTISCALE SURFACE =================
 resolution = 100
-
 x = np.linspace(0, 5, resolution)
 y = np.linspace(0, 5, resolution)
 Xg, Yg = np.meshgrid(x, y)
 
-# Base hull
 hull_base = 1 - (Yg**2) / (1.5**2)
 hull_base = np.clip(hull_base, 0, 1)
 
-# Riblets (aligned with flow)
 riblet = riblet_height * np.sin((2 * np.pi / riblet_spacing) * Xg)
 
-# Lotus nano-scale
 nano_freq = 40
 nano_amp = 0.08 * lotus_intensity
 
@@ -155,18 +152,16 @@ noise = 0.02 * np.random.randn(*Xg.shape)
 
 lotus = nano_amp * (np.cos(nano_freq * Xg) * np.cos(nano_freq * Yg)) + noise
 
-# Final surface
 Z = hull_base + riblet + lotus
 
-# ================= 3D PLOT =================
-st.subheader("3D Biomimetic Hull Surface (Multiscale)")
+# ================= 3D =================
+st.subheader("3D Biomimetic Surface")
 
-fig = go.Figure(data=[go.Surface(x=Xg, y=Yg, z=Z, colorscale='Viridis')])
-
+fig = go.Figure(data=[go.Surface(x=Xg, y=Yg, z=Z)])
 st.plotly_chart(fig, width='stretch')
 
 # ================= STL =================
-st.subheader("Export STL for SimScale")
+st.subheader("Export STL")
 
 if st.button("Generate STL"):
     try:
@@ -184,8 +179,8 @@ if st.button("Generate STL"):
     except Exception as e:
         st.error(f"STL generation failed: {e}")
 
-# ================= FLOW FIELD =================
-st.subheader("Flow Interaction Field (Denticle-Driven)")
+# ================= FLOW =================
+st.subheader("Flow Interaction")
 
 dZdx = np.gradient(Z, axis=1)
 dZdy = np.gradient(Z, axis=0)
@@ -197,74 +192,14 @@ velocity_field = np.sqrt(U**2 + V**2)
 
 fig_flow, ax_flow = plt.subplots()
 ax_flow.contourf(Xg, Yg, velocity_field, levels=30)
-ax_flow.set_title("Velocity Magnitude Variation")
 st.pyplot(fig_flow)
-
-# ================= FLOW VECTORS =================
-st.subheader("Flow Direction Field")
-
-step = 6
-
-fig_vec, ax_vec = plt.subplots()
-ax_vec.quiver(
-    Xg[::step, ::step], Yg[::step, ::step],
-    U[::step, ::step], V[::step, ::step],
-    scale=30
-)
-ax_vec.set_title("Flow Direction & Disturbance")
-st.pyplot(fig_vec)
-
-# ================= BIOFOULING =================
-st.subheader("Biofouling Risk Zones")
-
-low_flow = velocity_field < np.percentile(velocity_field, 40)
-low_lotus = np.abs(lotus) < np.percentile(np.abs(lotus), 40)
-
-attachment_zone = low_flow & low_lotus
-
-fig_bio, ax_bio = plt.subplots()
-ax_bio.contourf(Xg, Yg, attachment_zone, levels=1)
-ax_bio.set_title("High Fouling Risk Zones")
-st.pyplot(fig_bio)
-
-# ================= DRAG CURVE =================
-st.subheader("Drag vs Velocity")
-
-vels = np.linspace(0.5, 12, 40)
-drag_curve = []
-
-for v in vels:
-    try:
-        X = build_input(v)
-        drag_val = model.predict(X)[0][0]
-        drag_curve.append(max(drag_val, 0))  # prevent negatives
-    except:
-        drag_curve.append(0)
-        
-fig_drag, ax_drag = plt.subplots()
-ax_drag.plot(vels, drag_curve)
-st.pyplot(fig_drag)
-
-# ================= COMPARISON =================
-st.subheader("Surface Comparison")
-
-labels = ["Smooth", "Riblet", "Lotus", "Hybrid"]
-values = [
-    40,
-    65,
-    60,
-    max(pred[0], 0) if pred is not None else 75
-]
-fig_comp, ax_comp = plt.subplots()
-ax_comp.bar(labels, values)
-st.pyplot(fig_comp)
 
 # ================= INSIGHT =================
 st.subheader("Engineering Insight")
 
 st.write("""
-This system integrates riblet-induced drag reduction, lotus-inspired nano-scale hydrophobicity,
-and predictive modeling to create a multi-scale, intelligent marine hull surface system.
+This system integrates riblet drag reduction, lotus-inspired nano-textures,
+and machine learning prediction to design intelligent marine hull coatings.
 """)
 if st.button("Show Engineering Interpretation"):
     st.write("""
