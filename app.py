@@ -1,6 +1,3 @@
-
-
-
 import streamlit as st
 import numpy as np
 import joblib
@@ -64,10 +61,10 @@ if st.button("Run Simulation"):
         if len(pred[0]) >= 4:
             pred = pred[0]
             st.subheader("Performance Results")
-            st.metric("Drag Reduction", f"{pred[0]:.2f}")
-            st.metric("Biofouling Risk", f"{pred[1]:.2f}")
-            st.metric("Hydrophobicity", f"{pred[2]:.2f}")
-            st.metric("Durability", f"{pred[3]:.2f}")
+            st.metric("Drag Reduction", f"{pred[0]:.2f} %")
+            st.metric("Biofouling Risk Index", f"{pred[1]:.2f} (0–1)")
+            st.metric("Hydrophobicity (Contact Angle)", f"{pred[2]:.2f} °")
+            st.metric("Durability Index", f"{pred[3]:.2f} (relative)")
         else:
             st.error("Model output format mismatch")
 
