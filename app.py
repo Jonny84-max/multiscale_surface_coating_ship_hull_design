@@ -61,6 +61,7 @@ def build_input(v, t_val):
     return df[columns] 
 
 # ================= FIXED SIMULATION LOOP =================
+pred = None
 if st.button("Run Simulation"):
     try:
         progress = st.progress(0)
