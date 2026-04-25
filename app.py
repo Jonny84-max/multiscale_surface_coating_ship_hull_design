@@ -34,6 +34,7 @@ time = st.sidebar.slider("Time (days)", 1, 1095)
 material = st.sidebar.selectbox("Material", list(material_map.keys()))
 coating = st.sidebar.selectbox("Coating", list(coating_map.keys()))
 mode = st.sidebar.selectbox("Output Mode", ["Visualization STL", "CFD STL"])
+st.write(f"Simulation Time Horizon: {time} days")
 
 # ================= FEATURE BUILDER =================
 def build_input(v):
@@ -60,11 +61,21 @@ if st.button("Run Simulation"):
 
         if len(pred[0]) >= 4:
             pred = pred[0]
-            st.subheader("Performance Results")
-            st.metric("Drag Reduction", f"{pred[0]:.2f} %")
-            st.metric("Biofouling Risk Index", f"{pred[1]:.2f} (0–1)")
-            st.metric("Hydrophobicity (Contact Angle)", f"{pred[2]:.2f} °")
-            st.metric("Durability Index", f"{pred[3]:.2f} (relative)")
+            
+            # ===== CLIP VALUES (prevents negative nonsense) =====
+            drag = max(pred[0], 0)
+            bio = np.clip(pred[1], 0, 1)
+            hydro = max(pred[2], 0)
+            durability = max(pred[3], 0)
+
+            st.subheader("Performance Results")   # METRICS WITH UNITS
+            st.metric("Drag Reduction", f"{drag:.2f} %")
+            st.metric("Biofouling Risk Index", f"{bio:.2f} (0–1)")
+            st.metric("Hydrophobicity (Contact Angle)", f"{hydro:.2f} °")
+            st.metric("Durability Index", f"{durability:.2f} (relative)")
+            
+            # ===== INTERPRETATION NOTE =====
+            st.caption("Biofouling risk is normalized: 0 = low risk, 1 = high risk.")
         else:
             st.error("Model output format mismatch")
 
@@ -174,10 +185,11 @@ drag_curve = []
 for v in vels:
     try:
         X = build_input(v)
-        drag_curve.append(model.predict(X)[0][0])
+        drag_val = model.predict(X)[0][0]
+        drag_curve.append(max(drag_val, 0))  # prevent negatives
     except:
         drag_curve.append(0)
-
+        
 fig_drag, ax_drag = plt.subplots()
 ax_drag.plot(vels, drag_curve)
 st.pyplot(fig_drag)
@@ -186,8 +198,12 @@ st.pyplot(fig_drag)
 st.subheader("Surface Comparison")
 
 labels = ["Smooth", "Riblet", "Lotus", "Hybrid"]
-values = [40, 65, 60, pred[0] if pred is not None else 75]
-
+values = [
+    40,
+    65,
+    60,
+    max(pred[0], 0) if pred is not None else 75
+]
 fig_comp, ax_comp = plt.subplots()
 ax_comp.bar(labels, values)
 st.pyplot(fig_comp)
@@ -199,3 +215,10 @@ st.write("""
 This system integrates riblet-induced drag reduction, lotus-inspired nano-scale hydrophobicity,
 and predictive modeling to create a multi-scale, intelligent marine hull surface system.
 """)
+if st.button("Show Engineering Interpretation"):
+    st.write("""
+    - Riblet structures reduce turbulent drag by controlling boundary layer flow.
+    - Lotus-inspired nano-textures enhance hydrophobicity and reduce adhesion.
+    - Combined system improves antifouling performance and fuel efficiency.
+    - Predictive ML enables time-dependent biofouling estimation.
+    """)
