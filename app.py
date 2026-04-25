@@ -14,12 +14,15 @@ st.set_page_config(page_title="Biomimetic Design System", layout="wide")
 @st.cache_resource
 def load_model():
     try:
-        data = joblib.load("model.pkl")
+        # UPDATED: Using your specific model filename
+        data = joblib.load("shs_predictive_model.pkl")
+        
+        # Checking if it's a dictionary (containing model + columns) or a direct model
         if isinstance(data, dict) and "model" in data:
             return data["model"], data.get("columns", None)
         return data, None
     except Exception as e:
-        st.error(f"Model Load Error: {e}")
+        st.error(f"⚠️ Model Load Error: {e}. Please ensure 'shs_predictive_model.pkl' is in the app folder.")
         return None, None
 
 model, model_columns = load_model()
@@ -75,24 +78,27 @@ results_card = st.empty()
 last_pred = [0, 0, 0, 0]
 
 if st.button("Run Prediction"):
-    try:
-        progress_bar = st.progress(0)
-        t_range = range(1, days_input + 1) if run_sim else [days_input]
-        for t in t_range:
-            X = build_input(velocity, t)
-            raw_pred = model.predict(X)[0]
-            last_pred = raw_pred
-            with results_card.container():
-                st.subheader(f"📊 Performance: Day {t}")
-                c1, c2, c3, c4 = st.columns(4)
-                c1.metric("Drag Red.", f"{np.clip(raw_pred[0], 0, 95):.1f}%")
-                c2.metric("Bio-Accum.", f"{min(1.0, t*0.001 + raw_pred[1]*0.01):.3f}")
-                c3.metric("Contact Angle", f"{raw_pred[2]:.1f}°")
-                c4.metric("Durability", f"{max(0, raw_pred[3]):.0f} pts")
-            progress_bar.progress(t / days_input)
-            if run_sim: time_lib.sleep(speed)
-    except Exception as e:
-        st.error(f"Error: {e}")
+    if model is None:
+        st.error("Cannot run simulation: Model not loaded. Check the sidebar error for details.")
+    else:
+        try:
+            progress_bar = st.progress(0)
+            t_range = range(1, days_input + 1) if run_sim else [days_input]
+            for t in t_range:
+                X = build_input(velocity, t)
+                raw_pred = model.predict(X)[0]
+                last_pred = raw_pred
+                with results_card.container():
+                    st.subheader(f"📊 Performance: Day {t}")
+                    c1, c2, c3, c4 = st.columns(4)
+                    c1.metric("Drag Red.", f"{np.clip(raw_pred[0], 0, 95):.1f}%")
+                    c2.metric("Bio-Accum.", f"{min(1.0, t*0.001 + raw_pred[1]*0.01):.3f}")
+                    c3.metric("Contact Angle", f"{raw_pred[2]:.1f}°")
+                    c4.metric("Durability", f"{max(0, raw_pred[3]):.0f} pts")
+                progress_bar.progress(t / days_input)
+                if run_sim: time_lib.sleep(speed)
+        except Exception as e:
+            st.error(f"Prediction Error: {e}")
 
 # ================= COMPLETE VISUAL SUITE =================
 res = 100
@@ -125,9 +131,12 @@ with col3:
     fig_b, ax_b = plt.subplots(); ax_b.contourf(Xg, Yg, (v_field < 0.4), cmap='Reds'); st.pyplot(fig_b)
 with col4:
     st.subheader("Drag vs Velocity")
-    v_range = np.linspace(0.5, 25, 20)
-    d_curve = [model.predict(build_input(v, days_input))[0][0] for v in v_range]
-    fig_d, ax_d = plt.subplots(); ax_d.plot(v_range, d_curve, 'r-'); st.pyplot(fig_d)
+    if model is not None:
+        v_range = np.linspace(0.5, 25, 20)
+        d_curve = [model.predict(build_input(v, days_input))[0][0] for v in v_range]
+        fig_d, ax_d = plt.subplots(); ax_d.plot(v_range, d_curve, 'r-'); st.pyplot(fig_d)
+    else:
+        st.warning("Load model to see drag curve.")
 
 # 4. STL & Comparison
 st.divider()
