@@ -65,47 +65,42 @@ if st.button("Run Simulation"):
     try:
         progress = st.progress(0)
         cumulative_bio = 0
+        
+        # Ensure we use the correct slider variable name 'days_input'
         for t in range(1, days_input + 1):
             time_display.write(f"Simulation Day: {t}")
-	    	progress.progress(t / time_days)
+            progress.progress(t / days_input)
 
-            X = build_input(velocity, t)
+            # Fix: build_input only takes 'v' in your definition
+            # We set 'time' via the DataFrame logic
+            X = build_input(velocity)
             X.loc[0, "time"] = t
-	    	pred = model.predict(X)[0]
+            
+            pred = model.predict(X)[0]
                 
-	    	drag = max(pred[0], 0)
+            drag = max(pred[0], 0)
             daily_bio = np.clip(pred[1], 0, 1)
             
-		# cumulative biofouling growth   
-	    	cumulative_bio += daily_bio * 0.05
+            # Cumulative biofouling growth   
+            cumulative_bio += daily_bio * 0.05
             bio = min(cumulative_bio, 1)
             hydro = max(pred[2], 0)
             durability = max(pred[3], 0)
-		
-	    st.subheader("Performance Results")
-	    st.metric(
-                "Drag Reduction",
-                f"{drag:.2f} %",
+        
+            # Display metrics
+            st.subheader(f"Performance Results (Day {t})")
+            st.metric(
+                "Drag Reduction", 
+                f"{drag:.2f} %", 
                 delta=f"{drag - 50:.2f}% vs baseline"
             )
-		
-	    st.metric("Biofouling Accumulation", f"{bio:.2f} (0–1)")
+        
+            st.metric("Biofouling Accumulation", f"{bio:.2f} (0–1)")
             st.metric("Hydrophobicity (Contact Angle)", f"{hydro:.2f} °")
             st.metric("Durability Index", f"{durability:.2f}")
-	     
-	    if run_sim:
+         
+            if run_sim:
                 time_lib.sleep(speed)
-
-        else:
-            X = build_input(velocity, days_input)
-            pred = model.predict(X)[0]
-            drag, bio, hydro, durability = max(pred[0], 0), np.clip(pred[1], 0, 1), max(pred[2], 0), max(pred[3], 0)
-
-            st.subheader("Performance Results")
-            st.metric("Drag Reduction", f"{drag:.2f} %")
-            st.metric("Biofouling Risk Index", f"{bio:.2f}")
-            st.metric("Hydrophobicity", f"{hydro:.2f} °")
-            st.metric("Durability Index", f"{durability:.2f}")
 
     except Exception as e:
         st.error(f"Prediction failed: {e}")
