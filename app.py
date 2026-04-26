@@ -11,13 +11,13 @@ from surface_3d_pattern import generate_stl
 @st.cache_resource
 def load_model():
     try:
-        data = joblib.load("shs_predictive_model.pkl")
-        if isinstance(data, dict) and "model" in data:
-            return data["model"], data.get("columns", None)
-        return data, None
+    data = joblib.load("shs_predictive_model.pkl")
+    if isinstance(data, dict) and "model" in data:
+    return data["model"], data.get("columns", None)
+    return data, None
     except Exception as e:
-        st.error(f"Model Load Error: {e}")
-        return None, None
+    st.error(f"Model Load Error: {e}")
+    return None, None
 model, columns = load_model()
 
 # ================= MAPPINGS =================
@@ -74,125 +74,125 @@ def build_input(v, t_val):
     ca = np.degrees(np.arccos(np.clip(cos_theta, -1, 1)))
     
     full_data = {
-        "riblet_height": riblet_height,
-        "riblet_spacing": riblet_spacing,
-        "lotus_intensity": lotus_intensity,
-        "velocity": v,
-        "temperature": temperature,
-        "salinity": salinity,
-        "time": t_val,
-        "material": material_map[material],
-        "coating": coating_map[coating],
-        "aspect_ratio": asp,
-        "multiscale_index": lotus_intensity * (1 - (riblet_height * 0.1)),
-        "velocity_riblet_interact": v * asp,
-        "solid_fraction_f": f,
-        "cos_theta_eff": cos_theta,
-        "effective_contact_angle": ca,
-        "estimated_slip_length": (1 / (np.sqrt(f) + 1e-6)) * riblet_spacing
+    "riblet_height": riblet_height,
+    "riblet_spacing": riblet_spacing,
+    "lotus_intensity": lotus_intensity,
+    "velocity": v,
+    "temperature": temperature,
+    "salinity": salinity,
+    "time": t_val,
+    "material": material_map[material],
+    "coating": coating_map[coating],
+    "aspect_ratio": asp,
+    "multiscale_index": lotus_intensity * (1 - (riblet_height * 0.1)),
+    "velocity_riblet_interact": v * asp,
+    "solid_fraction_f": f,
+    "cos_theta_eff": cos_theta,
+    "effective_contact_angle": ca,
+    "estimated_slip_length": (1 / (np.sqrt(f) + 1e-6)) * riblet_spacing
     }
     
     df = pd.DataFrame([full_data])
     
     if model is not None:
-        if hasattr(model, 'feature_names_in_'):
-            required_cols = list(model.feature_names_in_)
-        elif columns is not None:
-            required_cols = columns
-        else:
-            required_cols = list(full_data.keys())
+    if hasattr(model, 'feature_names_in_'):
+    required_cols = list(model.feature_names_in_)
+    elif columns is not None:
+    required_cols = columns
+    else:
+    required_cols = list(full_data.keys())
 
-        final_df = pd.DataFrame()
-        for col in required_cols:
-            final_df[col] = df[col] if col in df.columns else [0.0]
-        return final_df
+    final_df = pd.DataFrame()
+    for col in required_cols:
+    final_df[col] = df[col] if col in df.columns else [0.0]
+    return final_df
     return df
 
 # ================= MODEL EXECUTION (VELOCITY & BIO LOGIC) =================
 if st.button("Run Simulation"):
     if model is None:
-        st.error("Model not loaded.")
+    st.error("Model not loaded.")
     else:
-        try:
-            results_card = st.empty()
-            progress_bar = st.progress(0)
-            cumulative_bio = 0
-            
-            t_range = range(1, days_input + 1) if run_sim else [days_input]
-            
-            for t in t_range:
-                X = build_input(velocity, t)
-                raw_pred = model.predict(X)[0]
+    try:
+    results_card = st.empty()
+    progress_bar = st.progress(0)
+    cumulative_bio = 0
+    
+    t_range = range(1, days_input + 1) if run_sim else [days_input]
+    
+    for t in t_range:
+    X = build_input(velocity, t)
+    raw_pred = model.predict(X)[0]
 
-                # Material Performance Modifiers
-                if material == "CFRP":
-                    dur_mod = 0.85  # Slowest wear (stiff ridges)
-                    drag_mod = 1.05        # Slight boost to drag efficiency
-                elif material == "Hybrid":
-                    dur_mod = 0.92  # Good balance
-                    drag_mod = 1.10        # Best bio-shielding performance
-                else:  # GFRP
-                    dur_mod = 1.2    # Faster wear
-                    drag_mod = 1.0
+    # Material Performance Modifiers
+    if material == "CFRP":
+    dur_mod = 0.85  # Slowest wear (stiff ridges)
+    drag_mod = 1.05    # Slight boost to drag efficiency
+    elif material == "Hybrid":
+    dur_mod = 0.92  # Good balance
+    drag_mod = 1.10    # Best bio-shielding performance
+    else:  # GFRP
+    dur_mod = 1.2    # Faster wear
+    drag_mod = 1.0
 
-                # Coating Modifiers (Surface Energy)
-                if coating == "PDMS":
-                    bio_mod, slip_mod = 0.3, 1.02
-                elif coating == "Fluoro":
-                    bio_mod, slip_mod = 0.5, 1.12
-                elif coating == "Sol-gel":
-                    bio_mod, slip_mod = 0.7, 1.05
-                else: # Epoxy/Vinyl
-                    bio_mod, slip_mod = 1.2, 1.0
-                
-                # Contact Angle (h_raw)
-                # Logic: Base angle + Lotus impact - Velocity pressure penalty
-                h_raw = 95 + (lotus_intensity * 75) - (velocity * 0.4)
-                
-                # Durability (dur_raw)
-                # Use dynamic decay. 
-                # Higher velocity causes the surface 'points' to drop faster over time.
-                wear_rate = ((velocity * 0.05) + 0.01) * dur_mod  # dur_mod makes CFRP wear 0.85x slower than GFRP (1.2x)
-                dur_raw = max(0, 100 - (t * wear_rate)) 
-                
-                # Mapping and clipping logic
-                laplace_stability = (1.0 / (riblet_spacing + 1e-6)) * lotus_intensity
-                wear_factor = max(0.88, 1 - (t / (4000/dur_mod))) if t > 1 else 1.0
+    # Coating Modifiers (Surface Energy)
+    if coating == "PDMS":
+    bio_mod, slip_mod = 0.3, 1.02
+    elif coating == "Fluoro":
+    bio_mod, slip_mod = 0.5, 1.12
+    elif coating == "Sol-gel":
+    bio_mod, slip_mod = 0.7, 1.05
+    else: # Epoxy/Vinyl
+    bio_mod, slip_mod = 1.2, 1.0
+    
+    # Contact Angle (h_raw)
+    # Logic: Base angle + Lotus impact - Velocity pressure penalty
+    h_raw = 95 + (lotus_intensity * 75) - (velocity * 0.4)
+    
+    # Durability (dur_raw)
+    # Use dynamic decay. 
+    # Higher velocity causes the surface 'points' to drop faster over time.
+    wear_rate = ((velocity * 0.05) + 0.01) * dur_mod  # dur_mod makes CFRP wear 0.85x slower than GFRP (1.2x)
+    dur_raw = max(0, 100 - (t * wear_rate)) 
+    
+    # Mapping and clipping logic
+    laplace_stability = (1.0 / (riblet_spacing + 1e-6)) * lotus_intensity
+    wear_factor = max(0.88, 1 - (t / (4000/dur_mod))) if t > 1 else 1.0
 
-                # Bio-Accumulation (b_raw & cumulative_bio)
-                # If hydro > 150 (SHS shield: Cassie-Baxter), growth is cut by 90%
-                bio_shield = 0.1 if (h_raw * (max(0.88, 1 - (t / 4000)))) > 150 else 0.8
-                daily_risk = bio_shield * bio_mod * (1 + (temperature / 40)) * 0.05   # bio_mod makes PDMS (0.4) much cleaner than Epoxy (1.2)
-                cumulative_bio += daily_risk
-                total_bio = min(1.0, cumulative_bio)
-                b_raw = 0.05   # This represents the base biological growth rate  
-                hydro = np.clip(h_raw * wear_factor, 0, 165.0)
-                durability = max(0, dur_raw) # Maps dur_raw to the metric
-                
-                # Extract drag from raw_pred based on your model output
-                d_raw = raw_pred if np.isscalar(raw_pred) else raw_pred[0]
-                drag_red = np.clip((d_raw + (hydro/20)) * drag_mod * slip_mod, 0, 95)  # Combines structural boost (drag_mod) with molecular slip (slip_mod) 
-                st.session_state.pred = [drag_red, total_bio, hydro, durability]
+    # Bio-Accumulation (b_raw & cumulative_bio)
+    # If hydro > 150 (SHS shield: Cassie-Baxter), growth is cut by 90%
+    bio_shield = 0.1 if (h_raw * (max(0.88, 1 - (t / 4000)))) > 150 else 0.8
+    daily_risk = bio_shield * bio_mod * (1 + (temperature / 40)) * 0.05   # bio_mod makes PDMS (0.4) much cleaner than Epoxy (1.2)
+    cumulative_bio += daily_risk
+    total_bio = min(1.0, cumulative_bio)
+    b_raw = 0.05   # This represents the base biological growth rate  
+    hydro = np.clip(h_raw * wear_factor, 0, 165.0)
+    durability = max(0, dur_raw) # Maps dur_raw to the metric
+    
+    # Extract drag from raw_pred based on your model output
+    d_raw = raw_pred if np.isscalar(raw_pred) else raw_pred[0]
+    drag_red = np.clip((d_raw + (hydro/20)) * drag_mod * slip_mod, 0, 95)  # Combines structural boost (drag_mod) with molecular slip (slip_mod) 
+    st.session_state.pred = [drag_red, total_bio, hydro, durability]
 
-                with results_card.container():
-                    st.subheader(f"Hull Performance Analysis: Day {t}")
-                    if hydro >= 150:
-                        st.success(f"Status: Superhydrophobic (SHS) | Air Layer Stable")
-                    elif hydro >= 90:
-                        st.info(f"Status: Hydrophobic | Partial Wetting Risk")
-                    else:
-                        st.warning(f"Status: Hydrophilic | Air Layer Collapsed")
+    with results_card.container():
+    st.subheader(f"Hull Performance Analysis: Day {t}")
+    if hydro >= 150:
+        st.success(f"Status: Superhydrophobic (SHS) | Air Layer Stable")
+    elif hydro >= 90:
+        st.info(f"Status: Hydrophobic | Partial Wetting Risk")
+    else:
+        st.warning(f"Status: Hydrophilic | Air Layer Collapsed")
 
-                    c1, c2, c3, c4 = st.columns(4)
-                    c1.metric("Drag Reduc.", f"{drag_red:.1f}%")
-                    c2.metric("Bio-Accum.", f"{total_bio:.2f}", delta=f"{daily_risk:.3f}")
-                    c3.metric("Contact Angle", f"{hydro:.1f}°")
-                    c4.metric("Durability", f"{durability:.1f} pts", help="Surface Integrity Score (100=Pristine, 0=Failed)")
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Drag Reduc.", f"{drag_red:.1f}%")
+    c2.metric("Bio-Accum.", f"{total_bio:.2f}", delta=f"{daily_risk:.3f}")
+    c3.metric("Contact Angle", f"{hydro:.1f}°")
+    c4.metric("Durability", f"{durability:.1f} pts", help="Surface Integrity Score (100=Pristine, 0=Failed)")
 
-                progress_bar.progress(t / days_input)
-                if run_sim: time_lib.sleep(speed)
-        except Exception as e:
-            st.error(f"Prediction Error: {e}")
+    progress_bar.progress(t / days_input)
+    if run_sim: time_lib.sleep(speed)
+    except Exception as e:
+    st.error(f"Prediction Error: {e}")
 
 # ================= 3D VISUALS =================
 res = 100
@@ -223,11 +223,11 @@ st.plotly_chart(go.Figure(data=[go.Surface(z=Z, colorscale='Viridis')]), width='
 # ================= STL =================
 if st.button("Generate STL for Export"):
     try:
-        _, _, _, path = generate_stl(riblet_spacing, riblet_height, lotus_intensity, mode=mode)
-        with open(path, "rb") as f:
-            st.download_button("Download STL", f, "biomimetic_hull.stl")
+    _, _, _, path = generate_stl(riblet_spacing, riblet_height, lotus_intensity, mode=mode)
+    with open(path, "rb") as f:
+    st.download_button("Download STL", f, "biomimetic_hull.stl")
     except Exception as e:
-        st.error(f"STL Error: {e}")
+    st.error(f"STL Error: {e}")
 
 # Flow & Bio Analysis
 dZdx, dZdy = np.gradient(Z)
@@ -268,15 +268,15 @@ with c3:
 
     for v in vels:
 
-        try:
+    try:
 
-            X_v = build_input(v, days_input)
+    X_v = build_input(v, days_input)
 
-            p = model.predict(X_v)[0]
+    p = model.predict(X_v)[0]
 
-            drags.append(max(p[0] if not np.isscalar(p) else p, 0))
+    drags.append(max(p[0] if not np.isscalar(p) else p, 0))
 
-        except: drags.append(0)
+    except: drags.append(0)
 
     fig3, ax3 = plt.subplots()
 
@@ -299,14 +299,14 @@ with c4:
     ax_comp.set_title("Performance vs. Standard Smooth Hull")
     ax_comp.set_ylim(0, 100)  # Forces the Y-axis to show the full 0-100 range
 
-    for bar in bars:             # Add percentage labels on top of bars
-        yval = bar.get_height()
-        ax_comp.text(bar.get_x() + bar.get_width()/2, yval + 1, f'{yval:.1f}%', ha='center', va='bottom')
+    for bar in bars:     # Add percentage labels on top of bars
+    yval = bar.get_height()
+    ax_comp.text(bar.get_x() + bar.get_width()/2, yval + 1, f'{yval:.1f}%', ha='center', va='bottom')
 
     st.pyplot(fig_comp)
     
     if "pred" not in st.session_state:
-        st.info("👉 To view Hybrid Design performance, please run the simulation.")
+    st.info("👉 To view Hybrid Design performance, please run the simulation.")
     
 # ================= ENGINEERING INSIGHT =================
 st.subheader("Engineering Interpretation")
@@ -318,9 +318,9 @@ st.info(
 
 st.success(f"""
 - Major Design Considerations: For maximum efficiency at **{velocity} knots**, the benchmark setup is:
-    - Base Material:      CFRP (Carbon Fiber Selected) — Provides high stiffness to maintain ridge geometry.
+    - Base Material:  CFRP (Carbon Fiber Selected) — Provides high stiffness to maintain ridge geometry.
     - Surface Coating:    PDMS (Silicone) — Lowest surface energy for non-stick performance.
-    - Geometry:      0.10mm Height / 0.15mm Spacing — Optimal Shark-skin V-groove ratio.
+    - Geometry:  0.10mm Height / 0.15mm Spacing — Optimal Shark-skin V-groove ratio.
     - Nano-Texture:   200nm Lotus Features — Maximizes air-layer stability (Plastron).
 """)
 
