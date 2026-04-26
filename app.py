@@ -160,27 +160,34 @@ x = np.linspace(0, 5, res)
 y = np.linspace(0, 5, res)
 Xg, Yg = np.meshgrid(x, y)
 
-# 1. Create a Flat Base Layer (Bottom of the plate)
-base_thickness = 0.5  # Constant thickness for the smooth underside
-
-# 2. Generate the Top Surface Textures
-# Hull curvature base
-hull_curve = np.clip(1 - (Yg**2) / (1.5**2), 0, 1)
-
-# Riblet macro-texture
-riblet = riblet_height * np.sin((2 * np.pi / riblet_spacing) * Xg)
-
-# Lotus nano-texture (Randomized peaks for the 'Fakir' effect)
+# 1. Texture Layer (Top)
+hull_base = np.clip(1 - (Yg**2) / (1.5**2), 0, 1)
+riblets = riblet_height * np.sin((2 * np.pi / riblet_spacing) * Xg)
 lotus = (0.08 * lotus_intensity) * (np.cos(45 * Xg) * np.cos(45 * Yg))
 
-# 3. Combine only for the Top
-# Z_top is the textured side, while the implicit bottom is Z=0
-Z = base_thickness + hull_curve + riblet + lotus
+# This is the "Face" with all your 160° potential
+Z_top = 0.5 + hull_base + riblets + lotus 
 
-st.subheader("3D Biomimetic Hull Surface (Textured Top / Smooth Bottom)")
-# Using 'width=stretch' to comply with 2026 Streamlit standards
-st.plotly_chart(go.Figure(data=[go.Surface(z=Z, colorscale='Viridis')]), width='stretch')
+# 2. Smooth Underside Layer
+# We create a second surface at a constant Z=0 to represent the hull interior
+Z_bottom = np.zeros_like(Z_top) 
 
+st.subheader("3D Biomimetic Hull Surface (Texture Top / Smooth Bottom)")
+
+# We plot the textured top, and the smooth base is implied by the Z=0 plane
+fig = go.Figure(data=[
+    # The Textured Surface
+    go.Surface(z=Z_top, colorscale='Viridis', name='Textured Hull'),
+    # The Smooth Underside
+    go.Surface(z=Z_bottom, colorscale='Greys', opacity=0.5, showscale=False, name='Smooth Base')
+])
+
+fig.update_layout(
+    scene=dict(zaxis=dict(range=[0, 2])), # Keep the view focused on the plate
+    width=1000, height=600
+)
+
+st.plotly_chart(fig, width='stretch')
 
 # Flow & Bio Analysis
 dZdx, dZdy = np.gradient(Z)
