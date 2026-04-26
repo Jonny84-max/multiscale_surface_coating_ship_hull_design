@@ -196,30 +196,57 @@ with col2:
     st.pyplot(fig2)
 
 # Comparison & Drag Curve
-st.subheader("Surface Comparison")
-labels = ["Smooth (Base)", "Riblet Only", "Lotus Only", "Your Hybrid Design"]
+st.subheader("Efficiency Analysis")
 
-# Get current simulation results
-current_drag = st.session_state.pred[0] if st.session_state.pred else 0
+c3, c4 = st.columns(2)
 
-# Values based on literature + your current result
-# Smooth is 0 because it's the baseline we compare against
-values = [0, 8.5, 5.2, current_drag]
+with c3:
 
-fig_comp, ax_comp = plt.subplots()
-bars = ax_comp.bar(labels, values, color=['#95a5a6', '#3498db', '#2ecc71', '#e67e22'])
+    vels = np.linspace(0.5, 25.0, 20)
 
-ax_comp.set_ylabel("Drag Reduction (%)")
-ax_comp.set_title("Performance vs. Standard Smooth Hull")
-ax_comp.set_ylim(0, 100)  # Forces the Y-axis to show the full 0-100 range
+    drags = []
 
-# Add percentage labels on top of bars
-for bar in bars:
-    yval = bar.get_height()
-    ax_comp.text(bar.get_x() + bar.get_width()/2, yval + 1, f'{yval:.1f}%', ha='center', va='bottom')
+    for v in vels:
 
-st.pyplot(fig_comp)
+        try:
 
+            X_v = build_input(v, days_input)
+
+            p = model.predict(X_v)[0]
+
+            drags.append(max(p[0] if not np.isscalar(p) else p, 0))
+
+        except: drags.append(0)
+
+    fig3, ax3 = plt.subplots()
+
+    ax3.plot(vels, drags, 'r--o')
+
+    ax3.set_xlabel("Velocity (knots)"); ax3.set_ylabel("Drag Reduction %")
+
+    st.pyplot(fig3)
+
+
+
+with c4:
+    labels = ["Smooth (Base)", "Riblet Only", "Lotus Only", "Hybrid Design"]
+
+    current_drag = st.session_state.pred[0] if st.session_state.pred else 0  # Get current simulation results
+    values = [0, 8.5, 5.2, current_drag]   # Smooth is 0 because it's the baseline we compare against
+
+    fig_comp, ax_comp = plt.subplots()
+    bars = ax_comp.bar(labels, values, color=['#95a5a6', '#3498db', '#2ecc71', '#e67e22'])
+
+    ax_comp.set_ylabel("Drag Reduction (%)")
+    ax_comp.set_title("Performance vs. Standard Smooth Hull")
+    ax_comp.set_ylim(0, 100)  # Forces the Y-axis to show the full 0-100 range
+
+    for bar in bars:             # Add percentage labels on top of bars
+        yval = bar.get_height()
+        ax_comp.text(bar.get_x() + bar.get_width()/2, yval + 1, f'{yval:.1f}%', ha='center', va='bottom')
+
+    st.pyplot(fig_comp)
+    
 # ================= INSIGHT =================
 st.subheader("Engineering Interpretation")
 st.info(f"Design targeted for {velocity} knots. Organism size consideration: Bacteria (~1μm), Algae (~100μm).")
