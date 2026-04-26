@@ -6,6 +6,16 @@ import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import time as time_lib
 from surface_3d_pattern import generate_stl
+import sys
+
+def trace_calls(frame, event, arg):
+    if event == 'call':
+        code = frame.f_code
+        if "bio_med" in code.co_names:
+            print(f"DEBUG: bio_med found in {code.co_name}")
+    return trace_calls
+
+sys.settrace(trace_calls)
 
 # ================= LOAD MODEL =================
 @st.cache_resource
