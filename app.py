@@ -29,7 +29,21 @@ coating_map = {"Epoxy": 0, "Vinyl": 1, "PDMS": 2, "Fluoro": 3, "Sol-gel": 4}
 st.set_page_config(page_title="Biomimetic Hull Design", layout="wide")
 st.title("Hybrid Biomimetic Hull Design System")
 
-st.sidebar.header("Surface Geometry (Bio-Defense)")
+#---- Materials & Coating Selection
+
+st.sidebar.header("Base Material Selection")
+material = st.sidebar.selectbox(
+    "Foundation Material", 
+    list(material_map.keys()), 
+    help="CFRP is most effective for maintaining sharp V-groove vertices."
+)
+coating = st.sidebar.selectbox(
+    "Surface Coating", 
+    list(coating_map.keys()), 
+    help="PDMS (Silicone) is the most effective Foul-Release coating."
+)
+st.sidebar.header("Surface Geometry (Biofouling resistance)")
+
 # Natural shark denticle height: ~0.1mm
 riblet_height = st.sidebar.slider("Riblet Height (mm)", 0.01, 0.3, 0.10)
 # Natural spacing for 20 knots: ~0.15mm
@@ -141,7 +155,7 @@ if st.button("Run Simulation"):
                 # Durability (dur_raw)
                 # Use dynamic decay. 
                 # Higher velocity causes the surface 'points' to drop faster over time.
-                wear_rate = (velocity * 0.05) + 0.01 
+                wear_rate = (velocity * 0.05) + 0.01 * dur_mod  # dur_mod makes CFRP wear 0.85x slower than GFRP (1.2x)
                 dur_raw = max(0, 100 - (t * wear_rate)) 
                 
                 # Mapping and clipping logic
@@ -151,14 +165,14 @@ if st.button("Run Simulation"):
                 # Bio-Accumulation (b_raw & cumulative_bio)
                 # If hydro > 150 (SHS shield: Cassie-Baxter), growth is cut by 90%
                 bio_shield = 0.1 if (h_raw * (max(0.88, 1 - (t / 4000)))) > 150 else 0.8
-                daily_risk = bio_shield * (1 + (temperature / 40)) * 0.05
+                daily_risk = bio_shield * bio_med * (1 + (temperature / 40)) * 0.05   # bio_mod makes PDMS (0.4) much cleaner than Epoxy (1.2)
                 cumulative_bio += daily_risk 
-                b_raw = 0.05   # This represents the base biological growth rate
+                b_raw = 0.05   # This represents the base biological growth rate  
                 hydro = np.clip(h_raw * wear_factor, 0, 165.0) 
                 
                 # Extract drag from raw_pred based on your model output
                 d_raw = raw_pred if np.isscalar(raw_pred) else raw_pred[0]
-                drag_red = np.clip(d_raw + (hydro/20), 0, 95) 
+                drag_red = np.clip((d_raw + (hydro/20)) * drag_mod * slip_mod, 0, 95)  # Combines structural boost (drag_mod) with molecular slip (slip_mod) 
                 
                 total_bio = min(1.0, cumulative_bio)
                 durability = max(0, dur_raw) # Maps your updated dur_raw to the metric
@@ -306,6 +320,14 @@ st.info(
     f"Design evaluated at {velocity} knots. "
     "Target organisms: Bacteria (~1 μm), Algae (~100 μm)."
 )
+
+st.success(f"""
+- Ultimate Design Configuration: For maximum efficiency at **{velocity} knots**, the benchmark setup is:
+    - Base Material: CFRP (Carbon Fiber Selected) — Provides high stiffness to maintain ridge geometry.
+    - Surface Coating: PDMS (Silicone) — Lowest surface energy for non-stick performance.
+    - Geometry: 0.10mm Height / 0.15mm Spacing — Optimal Shark-skin V-groove ratio.
+    - Nano-Texture: 200nm Lotus Features — Maximizes air-layer stability (Plastron).
+""")
 
 st.markdown("""
 **Core Design Strategy**
