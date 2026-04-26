@@ -108,29 +108,36 @@ if st.button("Run Simulation"):
                 X = build_input(velocity, t)
                 raw_pred = model.predict(X)[0]
                 
-                # Extract and scale prediction for the 160 degree potential
-                if isinstance(raw_pred, (list, np.ndarray)) and len(raw_pred) >= 3:
-                    d_raw, b_raw, h_raw, dur_raw = raw_pred[0], raw_pred[1], raw_pred[2], raw_pred[3]
-                else:
-                    d_raw = raw_pred if np.isscalar(raw_pred) else raw_pred[0]
-                    # Logic: Base angle + Lotus impact - Velocity pressure penalty
-                    h_raw = 95 + (lotus_intensity * 75) - (velocity * 0.4)
-                    b_raw, dur_raw = 0.05, 80.0
+                # Contact Angle (h_raw)
+                # Logic: Base angle + Lotus impact - Velocity pressure penalty
+                h_raw = 95 + (lotus_intensity * 75) - (velocity * 0.4)
+                
+                # Durability (dur_raw)
+                # Use dynamic decay. 
+                # Higher velocity causes the surface 'points' to drop faster over time.
+                wear_rate = (velocity * 0.05) + 0.01 
+                dur_raw = max(0, 100 - (t * wear_rate)) 
 
-                # BIO-DYNAMICS: If Spacing is tight and Angle is high, bacteria can't dock
-                # Bacteria size ~1um, Algae ~10um. We need air layer stability.
+                # Bio-Accumulation (b_raw & cumulative_bio)
+                # If hydro > 150 (SHS shield), growth is cut by 90%
+                bio_shield = 0.1 if (h_raw * (max(0.88, 1 - (t / 4000)))) > 150 else 0.8
+                # Boost the b_raw multiplier so the 0.00 updates visibly
+                b_raw = 0.5 * bio_shield * (1 + (temperature / 40))
+                
+                # Adding to cumulative total (scaled for visibility in Streamlit)
+                cumulative_bio += b_raw * 0.05 
+                # Mapping and clipping logic
                 laplace_stability = (1.0 / (riblet_spacing + 1e-6)) * lotus_intensity
                 wear_factor = max(0.88, 1 - (t / 4000)) if t > 1 else 1.0
                 
-                hydro = np.clip(h_raw * wear_factor, 0, 165.0) # Allowing up to 160+
-                drag_red = np.clip(d_raw + (hydro/20), 0, 95) # Drag benefit from slip
+                hydro = np.clip(h_raw * wear_factor, 0, 165.0) 
                 
-                # Bio-accumulation drops if SHS shield is active
-                bio_shield = 0.1 if hydro > 150 else 1.0
-                daily_risk = max(0, b_raw * bio_shield)
-                cumulative_bio += daily_risk * 0.015
+                # Extract drag from raw_pred based on your model output
+                d_raw = raw_pred if np.isscalar(raw_pred) else raw_pred[0]
+                drag_red = np.clip(d_raw + (hydro/20), 0, 95) 
+                
                 total_bio = min(1.0, cumulative_bio)
-                durability = max(0, dur_raw)
+                durability = max(0, dur_raw) # Maps your updated dur_raw to the metric
 
                 st.session_state.pred = [drag_red, total_bio, hydro, durability]
 
