@@ -8,6 +8,7 @@ import time as time_lib
 from surface_3d_pattern import generate_stl
 
 # ================= LOAD MODEL =================
+@st.cache_resource
 def load_model():
     try:
         data = joblib.load("shs_predictive_model.pkl")
@@ -17,7 +18,6 @@ def load_model():
     except Exception as e:
         st.error(f"Model Load Error: {e}")
         return None, None
-
 model, columns = load_model()
 
 # ================= MAPPINGS =================
