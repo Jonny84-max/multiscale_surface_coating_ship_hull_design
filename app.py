@@ -184,16 +184,26 @@ dZdx, dZdy = np.gradient(Z)
 U, V = 1 - np.abs(dZdx) * 2, -dZdy * 0.5
 v_field = np.sqrt(U**2 + V**2)
 col1, col2 = st.columns(2)
+extent = [0, 5, 0, 5] # Defines the [xmin, xmax, ymin, ymax] for the charts
 with col1:
-    st.write("**Flow Interaction Field**")
-    fig1, ax1 = plt.subplots()
-    ax1.contourf(Xg, Yg, v_field, cmap='RdYlBu_r')
-    st.pyplot(fig1)
+    st.write("**Flow Interaction Field (Velocity)**")
+    fig_flow, ax_flow = plt.subplots()
+    # Use 'extent' to define the 0-5mm coordinates
+    cf = ax_flow.contourf(Xg, Yg, velocity_field, levels=30, cmap='RdYlBu_r', extent=extent)
+    ax_flow.set_xlabel("Length (mm)")
+    ax_flow.set_ylabel("Width (mm)")
+    plt.colorbar(cf, ax=ax_flow, label="Normalized Velocity")
+    st.pyplot(fig_flow)
+    
 with col2:
-    st.write("**Biofouling Risk Zones (Low Flow & Wetting)**")
-    fig2, ax2 = plt.subplots()
-    ax2.contourf(Xg, Yg, (v_field < np.percentile(v_field, 35)), cmap='Reds')
-    st.pyplot(fig2)
+    st.write("**Biofouling Risk Zones (Low Flow)**")
+    # Organisms like bacteria (~1μm) settle in 'stagnant' red zones
+    attachment_zone = (velocity_field < np.percentile(velocity_field, 35))
+    fig_bio, ax_bio = plt.subplots()
+    ax_bio.imshow(attachment_zone, cmap='Reds', extent=extent, origin='lower')
+    ax_bio.set_xlabel("Length (mm)")
+    ax_bio.set_ylabel("Width (mm)")
+    st.pyplot(fig_bio)
 
 # Comparison & Drag Curve
 st.subheader("Efficiency Analysis")
