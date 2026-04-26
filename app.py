@@ -59,8 +59,6 @@ temperature = st.sidebar.slider("Temperature (°C)", 0, 40, 20)
 salinity = st.sidebar.slider("Salinity (PSU)", 10, 40, 35)
 days_input = st.sidebar.slider("Time (days)", 1, 1095, 30)
 
-material = st.sidebar.selectbox("Material", list(material_map.keys()))
-coating = st.sidebar.selectbox("Coating", list(coating_map.keys()))
 mode = st.sidebar.selectbox("Output Mode", ["Visualization STL", "CFD STL"])
 
 run_sim = st.sidebar.checkbox("Run Time Simulation")
