@@ -123,6 +123,7 @@ if st.button("Run Simulation"):
                 bio_shield = 0.1 if (h_raw * (max(0.88, 1 - (t / 4000)))) > 150 else 0.8
                 daily_risk = 0.5 * bio_shield * (1 + (temperature / 40)) * 0.05
                 cumulative_bio += daily_risk 
+                b_raw = 0.05   # This represents the base biological growth rate
                 
                 # Adding to cumulative total (scaled for visibility in Streamlit)
                 cumulative_bio += b_raw * 0.05 
