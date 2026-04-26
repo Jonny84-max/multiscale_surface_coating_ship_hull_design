@@ -259,61 +259,55 @@ with c4:
         st.info("👉 To view Hybrid Design performance, please run the simulation.")
     
 # ================= ENGINEERING INSIGHT =================
-st.subheader("Engineering Insight")
+st.subheader("Engineering Insight & Biofouling Strategy")
 
-st.info(
-    f"""
-    **Operating Condition:** Designed for ~{velocity} knots  
+st.markdown(f"""
+### Operating Design Conditions
+- **Target Speed:** ~{velocity} knots  
+- **Fouling Scale Considered:**  
+  - Bacteria (~1 μm)  
+  - Algae & Micro-organisms (~100 μm)  
 
-    **Target Fouling Scale:**  
-    - Bacteria (~1 μm)  
-    - Algae & Micro-organisms (~100 μm)  
+---
 
-    This system integrates flow control (riblets) and surface chemistry (lotus-inspired nano-textures) 
-    to simultaneously reduce drag and delay biofouling.
-    """
-)
+### Surface Engineering Strategy
 
-# ================= DETAILED EXPLANATION =================
-if st.button("Show Design Mechanism"):
-    st.write("""
-    ### Core Design Strategy
+**1. Riblet-Based Flow Control**
+- Riblets align with the flow direction to suppress turbulent vortices  
+- Reduces skin-friction drag at the boundary layer  
 
-    **1. Riblet Flow Control**
-    - Aligns with flow direction to suppress turbulent vortices  
-    - Reduces skin-friction drag at the boundary layer  
+**2. Lotus-Inspired Nano Texture**
+- High contact angle (>150°) minimizes liquid-solid interaction  
+- Reduces surface energy and prevents early microbial adhesion  
 
-    **2. Lotus-Inspired Nano Texture**
-    - Creates high contact angle (>150°) surfaces  
-    - Minimizes liquid-solid contact area  
-    - Prevents initial microbial adhesion  
+**3. Hybrid Design Advantage**
+- Riblets → Immediate drag reduction (short-term performance)  
+- Nano-texture → Delayed biofouling (long-term efficiency)  
 
-    **3. Hybrid Effect**
-    - Riblets → immediate drag reduction (short-term performance)  
-    - Nano-texture → delayed fouling (long-term efficiency)  
-    """)
+---
 
-# ================= BIOFOULING DEFENSE =================
-if st.button("Show Bio-Defense Analysis"):
-    st.write("""
-    ### Biofouling Resistance Mechanism
+### Biofouling Resistance Mechanism
 
-    **Cassie–Baxter State (Air Layer Formation)**
-    - Surface traps air pockets (plastron layer)  
-    - Acts as a physical barrier against microorganisms  
+**Cassie–Baxter State (Plastron Formation)**
+- Air pockets form a protective barrier against microorganisms  
 
-    **Pressure Balance at High Speed (~20 knots)**
-    - Riblet spacing (~0.15 mm) maintains plastron stability  
-    - Prevents air layer collapse under hydrodynamic pressure  
+**Hydrodynamic Stability at High Velocity**
+- Optimized riblet spacing (~0.15 mm) maintains plastron integrity  
+- Prevents air layer collapse under dynamic flow conditions  
 
-    **Adhesion Disruption**
-    - Sub-micron nano-peaks reduce effective bonding area  
-    - Weakens bacterial protein attachment and biofilm initiation  
+**Adhesion Disruption**
+- Sub-micron nano-peaks reduce effective bonding area  
+- Weakens bacterial protein attachment and biofilm initiation  
 
-    **Result**
-    - Delays conditioning film formation  
-    - Slows transition to macrofouling (e.g., barnacles)
-    """)
+---
+
+### Engineering Outcome
+
+- Reduced hydrodynamic drag  
+- Delayed conditioning film formation  
+- Slower transition to macrofouling (e.g., barnacles)  
+- Improved fuel efficiency and hull longevity  
+""")
 
 # ================= STL =================
 if st.button("Generate STL for Export"):
