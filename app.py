@@ -179,6 +179,15 @@ st.subheader("3D Biomimetic Hull Surface (Solid Plate)")
 # Use 'width=stretch' for Streamlit 2026 compliance
 st.plotly_chart(go.Figure(data=[go.Surface(z=Z, colorscale='Viridis')]), width='stretch')
 
+# ================= STL =================
+if st.button("Generate STL for Export"):
+    try:
+        _, _, _, path = generate_stl(riblet_spacing, riblet_height, lotus_intensity, mode=mode)
+        with open(path, "rb") as f:
+            st.download_button("Download STL", f, "biomimetic_hull.stl")
+    except Exception as e:
+        st.error(f"STL Error: {e}")
+
 # Flow & Bio Analysis
 dZdx, dZdy = np.gradient(Z)
 U, V = 1 - np.abs(dZdx) * 2, -dZdy * 0.5
@@ -308,12 +317,3 @@ st.markdown(f"""
 - Slower transition to macrofouling (e.g., barnacles)  
 - Improved fuel efficiency and hull longevity  
 """)
-
-# ================= STL =================
-if st.button("Generate STL for Export"):
-    try:
-        _, _, _, path = generate_stl(riblet_spacing, riblet_height, lotus_intensity, mode=mode)
-        with open(path, "rb") as f:
-            st.download_button("Download STL", f, "biomimetic_hull.stl")
-    except Exception as e:
-        st.error(f"STL Error: {e}")
