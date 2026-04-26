@@ -254,8 +254,9 @@ with c4:
         ax_comp.text(bar.get_x() + bar.get_width()/2, yval + 1, f'{yval:.1f}%', ha='center', va='bottom')
 
     st.pyplot(fig_comp)
+    
     if "pred" not in st.session_state:
-    st.info("👉 To view Hybrid Design performance, please run the simulation.")
+        st.info("👉 To view Hybrid Design performance, please run the simulation.")
     
 # ================= INSIGHT =================
 st.subheader("Engineering Interpretation")
