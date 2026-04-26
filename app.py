@@ -30,9 +30,14 @@ st.set_page_config(page_title="Biomimetic Hull Design", layout="wide")
 st.title("Hybrid Biomimetic Hull Design System")
 
 st.sidebar.header("Surface Geometry (Bio-Defense)")
+# Natural shark denticle height: ~0.1mm
 riblet_height = st.sidebar.slider("Riblet Height (mm)", 0.01, 0.3, 0.10)
+# Natural spacing for 20 knots: ~0.15mm
 riblet_spacing = st.sidebar.slider("Riblet Spacing (mm)", 0.05, 1.0, 0.15)
-lotus_intensity = st.sidebar.slider("Lotus Intensity (Nano-Scale)", 0.0, 1.0, 0.95)
+# 200nm is the optimal natural target for wax-mimicry. nm is Nanometrs
+lotus_nm = st.sidebar.slider("Lotus Feature Size (Nanometers (nm))", 100, 1000, 200)
+# Convert back to a 0.0 - 1.0 intensity for the math model. Smaller nm = Higher "Intensity" (Efficiency)
+lotus_intensity = np.clip(1.0 - (lotus_nm - 100) / 900, 0.0, 1.0)
 
 st.sidebar.header("Operational Conditions")
 velocity = st.sidebar.slider("Velocity (knots)", 0.5, 25.0, 20.0) # Targeted 18-20 range
@@ -117,20 +122,17 @@ if st.button("Run Simulation"):
                 # Higher velocity causes the surface 'points' to drop faster over time.
                 wear_rate = (velocity * 0.05) + 0.01 
                 dur_raw = max(0, 100 - (t * wear_rate)) 
-
-                # Bio-Accumulation (b_raw & cumulative_bio)
-                # If hydro > 150 (SHS shield), growth is cut by 90%
-                bio_shield = 0.1 if (h_raw * (max(0.88, 1 - (t / 4000)))) > 150 else 0.8
-                daily_risk = 0.5 * bio_shield * (1 + (temperature / 40)) * 0.05
-                cumulative_bio += daily_risk 
-                b_raw = 0.05   # This represents the base biological growth rate
                 
-                # Adding to cumulative total (scaled for visibility in Streamlit)
-                cumulative_bio += b_raw * 0.05 
                 # Mapping and clipping logic
                 laplace_stability = (1.0 / (riblet_spacing + 1e-6)) * lotus_intensity
                 wear_factor = max(0.88, 1 - (t / 4000)) if t > 1 else 1.0
-                
+
+                # Bio-Accumulation (b_raw & cumulative_bio)
+                # If hydro > 150 (SHS shield: Cassie-Baxter), growth is cut by 90%
+                bio_shield = 0.1 if (h_raw * (max(0.88, 1 - (t / 4000)))) > 150 else 0.8
+                daily_risk = bio_shield * (1 + (temperature / 40)) * 0.05
+                cumulative_bio += daily_risk 
+                b_raw = 0.05   # This represents the base biological growth rate
                 hydro = np.clip(h_raw * wear_factor, 0, 165.0) 
                 
                 # Extract drag from raw_pred based on your model output
@@ -168,19 +170,20 @@ x = np.linspace(0, 5, res)
 y = np.linspace(0, 5, res)
 Xg, Yg = np.meshgrid(x, y)
 
-# 1. Texture logic
+# 1. Texture logic: Shark Skin V-Groove (Triangle Wave)
 hull_base = np.clip(1 - (Yg**2) / (1.5**2), 0, 1)
-riblet = riblet_height * np.sin((2 * np.pi / riblet_spacing) * Xg)
-lotus = (0.08 * lotus_intensity) * (np.cos(45 * Xg) * np.cos(45 * Yg))
+# Shark-inspired triangular ridges
+# Formula: Triangle wave = (2*A/pi) * arcsin(sin(2*pi*x/p)) 
+# Simplified for performance:
+riblet = riblet_height * (1 - 2 * np.abs((Xg / riblet_spacing) % 1 - 0.5))
+
+# Hierarchical Nano-scale Lotus effect (Superimposed on ridges)
+lotus = (0.04 * lotus_intensity) * (np.cos(45 * Xg) * np.cos(45 * Yg))
 
 # 2. Base Plate Logic
-base_thickness = 0.2 
-
-# We keep the name 'Z' exactly as it was before to prevent NameErrors
+base_thickness = 0.2
 Z = base_thickness + hull_base + riblet + lotus
-
-# This "clamping" ensures the bottom is perfectly flat at the base_thickness level
-Z = np.maximum(Z, base_thickness)
+Z = np.maximum(Z, base_thickness) # This "clamping" ensures the bottom is perfectly flat at the base_thickness level
 
 st.subheader("3D Biomimetic Hull Surface (Solid Plate)")
 
