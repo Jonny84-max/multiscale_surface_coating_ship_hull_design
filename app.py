@@ -27,14 +27,14 @@ coating_map = {"Epoxy": 0, "Vinyl": 1, "PDMS": 2, "Fluoro": 3, "Sol-gel": 4}
 
 # ================= UI SETUP =================
 st.set_page_config(page_title="Biomimetic Hull Design", layout="wide")
-st.title("🚢 Hybrid Biomimetic Hull Design System")
+st.title("Hybrid Biomimetic Hull Design System")
 
-st.sidebar.header("🛡️ Surface Geometry (Bio-Defense)")
+st.sidebar.header("Surface Geometry (Bio-Defense)")
 riblet_height = st.sidebar.slider("Riblet Height (mm)", 0.01, 0.3, 0.10)
 riblet_spacing = st.sidebar.slider("Riblet Spacing (mm)", 0.05, 1.0, 0.15)
 lotus_intensity = st.sidebar.slider("Lotus Intensity (Nano-Scale)", 0.0, 1.0, 0.95)
 
-st.sidebar.header("🌊 Operational Conditions")
+st.sidebar.header("Operational Conditions")
 velocity = st.sidebar.slider("Velocity (knots)", 0.5, 25.0, 20.0) # Targeted 18-20 range
 temperature = st.sidebar.slider("Temperature (°C)", 0, 40, 20)
 salinity = st.sidebar.slider("Salinity (PSU)", 10, 40, 35)
@@ -135,13 +135,13 @@ if st.button("Run Simulation"):
                 st.session_state.pred = [drag_red, total_bio, hydro, durability]
 
                 with results_card.container():
-                    st.subheader(f"📊 Hull Performance Analysis: Day {t}")
+                    st.subheader(f"Hull Performance Analysis: Day {t}")
                     if hydro >= 150:
-                        st.success(f"✨ Status: Superhydrophobic (SHS) | Air Layer Stable")
+                        st.success(f"Status: Superhydrophobic (SHS) | Air Layer Stable")
                     elif hydro >= 90:
-                        st.info(f"💧 Status: Hydrophobic | Partial Wetting Risk")
+                        st.info(f"Status: Hydrophobic | Partial Wetting Risk")
                     else:
-                        st.warning(f"⚠️ Status: Hydrophilic | Air Layer Collapsed")
+                        st.warning(f"Status: Hydrophilic | Air Layer Collapsed")
 
                     c1, c2, c3, c4 = st.columns(4)
                     c1.metric("Drag Reduc.", f"{drag_red:.1f}%")
@@ -196,30 +196,29 @@ with col2:
     st.pyplot(fig2)
 
 # Comparison & Drag Curve
-st.subheader("Efficiency Analysis")
-c3, c4 = st.columns(2)
-with c3:
-    vels = np.linspace(0.5, 25.0, 20)
-    drags = []
-    for v in vels:
-        try:
-            X_v = build_input(v, days_input)
-            p = model.predict(X_v)[0]
-            drags.append(max(p[0] if not np.isscalar(p) else p, 0))
-        except: drags.append(0)
-    fig3, ax3 = plt.subplots()
-    ax3.plot(vels, drags, 'r--o')
-    ax3.set_xlabel("Velocity (knots)"); ax3.set_ylabel("Drag Reduction %")
-    st.pyplot(fig3)
+st.subheader("Surface Comparison")
+labels = ["Smooth (Base)", "Riblet Only", "Lotus Only", "Your Hybrid Design"]
 
-with c4:
-    labels = ["Smooth", "Riblet", "Lotus", "Hybrid"]
-    current_drag = st.session_state.pred[0] if st.session_state.pred else 0
-    vals = [0, 8.5, 5.2, current_drag]
-    fig4, ax4 = plt.subplots()
-    ax4.bar(labels, vals, color=['gray', 'blue', 'green', 'orange'])
-    ax4.set_ylim(0, 100)
-    st.pyplot(fig4)
+# Get current simulation results
+current_drag = st.session_state.pred[0] if st.session_state.pred else 0
+
+# Values based on literature + your current result
+# Smooth is 0 because it's the baseline we compare against
+values = [0, 8.5, 5.2, current_drag]
+
+fig_comp, ax_comp = plt.subplots()
+bars = ax_comp.bar(labels, values, color=['#95a5a6', '#3498db', '#2ecc71', '#e67e22'])
+
+ax_comp.set_ylabel("Drag Reduction (%)")
+ax_comp.set_title("Performance vs. Standard Smooth Hull")
+ax_comp.set_ylim(0, 100)  # Forces the Y-axis to show the full 0-100 range
+
+# Add percentage labels on top of bars
+for bar in bars:
+    yval = bar.get_height()
+    ax_comp.text(bar.get_x() + bar.get_width()/2, yval + 1, f'{yval:.1f}%', ha='center', va='bottom')
+
+st.pyplot(fig_comp)
 
 # ================= INSIGHT =================
 st.subheader("Engineering Interpretation")
