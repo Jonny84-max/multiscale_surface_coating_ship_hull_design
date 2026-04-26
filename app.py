@@ -268,52 +268,37 @@ with c4:
         st.info("👉 To view Hybrid Design performance, please run the simulation.")
     
 # ================= ENGINEERING INSIGHT =================
-st.subheader("Engineering Insight & Biofouling Strategy")
+st.subheader("Engineering Interpretation")
 
-st.markdown(f"""
-### Operating Design Conditions
-- **Target Speed:** ~{velocity} knots  
-- **Fouling Scale Considered:**  
-  - Bacteria (~1 μm)  
-  - Algae & Micro-organisms (~100 μm)  
+st.info(
+    f"Design evaluated at {velocity} knots. "
+    "Target organisms: Bacteria (~1 μm), Algae (~100 μm)."
+)
 
----
+st.markdown("""
+**Core Mechanisms**
 
-### Surface Engineering Strategy
+- **Riblets:** Reduce turbulent drag by structuring boundary layer flow.
+- **Lotus Effect:** Nano-scale roughness reduces liquid-solid contact, limiting adhesion.
+- **Hybrid Design:** Simultaneously improves hydrodynamic efficiency and antifouling resistance.
 
-**1. Riblet-Based Flow Control**
-- Riblets align with the flow direction to suppress turbulent vortices  
-- Reduces skin-friction drag at the boundary layer  
+**Surface Physics Insight**
 
-**2. Lotus-Inspired Nano Texture**
-- High contact angle (>150°) minimizes liquid-solid interaction  
-- Reduces surface energy and prevents early microbial adhesion  
+- High contact angles (~150°+) promote a **Cassie–Baxter state**, sustaining an air layer (plastron).
+- Riblet spacing is tuned to maintain **pressure stability under flow conditions**.
+- Nano-textures reduce effective attachment area for microbial colonization.
 
-**3. Hybrid Design Advantage**
-- Riblets → Immediate drag reduction (short-term performance)  
-- Nano-texture → Delayed biofouling (long-term efficiency)  
+**Biofouling Defense Strategy**
 
----
+- Disrupts early-stage fouling:
+  - Conditioning film formation  
+  - Bacterial adhesion  
+  - Microorganism settlement  
+- Reduces transition to macrofouling (e.g., barnacles)
 
-### Biofouling Resistance Mechanism
+**Engineering Outcome**
 
-**Cassie–Baxter State (Plastron Formation)**
-- Air pockets form a protective barrier against microorganisms  
-
-**Hydrodynamic Stability at High Velocity**
-- Optimized riblet spacing (~0.15 mm) maintains plastron integrity  
-- Prevents air layer collapse under dynamic flow conditions  
-
-**Adhesion Disruption**
-- Sub-micron nano-peaks reduce effective bonding area  
-- Weakens bacterial protein attachment and biofilm initiation  
-
----
-
-### Engineering Outcome
-
-- Reduced hydrodynamic drag  
-- Delayed conditioning film formation  
-- Slower transition to macrofouling (e.g., barnacles)  
-- Improved fuel efficiency and hull longevity  
+- Lower drag → improved fuel efficiency  
+- Reduced fouling → lower maintenance cost  
+- Predictive modeling → time-dependent performance estimation
 """)
