@@ -9,7 +9,7 @@ from surface_3d_pattern import generate_stl
 
 # ================= LOAD MODEL =================
 def load_model():
-    try:
+  try:
         data = joblib.load("shs_predictive_model.pkl")
         if isinstance(data, dict) and "model" in data:
             return data["model"], data.get("columns", None)
