@@ -129,18 +129,18 @@ if st.button("Run Simulation"):
 
                 # Material Performance Modifiers
                 if material == "CFRP":
-                    durability_mod = 0.85  # Slowest wear (stiff ridges)
+                    dur_mod = 0.85  # Slowest wear (stiff ridges)
                     drag_mod = 1.05        # Slight boost to drag efficiency
                 elif material == "Hybrid":
-                    durability_mod = 0.92  # Good balance
+                    dur_mod = 0.92  # Good balance
                     drag_mod = 1.10        # Best bio-shielding performance
                 else:  # GFRP
-                    durability_mod = 1.2    # Faster wear
+                    dur_mod = 1.2    # Faster wear
                     drag_mod = 1.0
 
                 # COATING MODIFIERS (Surface Energy)
                 if coating == "PDMS":
-                    bio_mod, slip_mod = 0.4, 1.08
+                    bio_mod, slip_mod = 0.3, 1.02
                 elif coating == "Fluoro":
                     bio_mod, slip_mod = 0.5, 1.12
                 elif coating == "Sol-gel":
@@ -160,23 +160,21 @@ if st.button("Run Simulation"):
                 
                 # Mapping and clipping logic
                 laplace_stability = (1.0 / (riblet_spacing + 1e-6)) * lotus_intensity
-                wear_factor = max(0.88, 1 - (t / 4000)) if t > 1 else 1.0
+                wear_factor = max(0.88, 1 - (t / (4000/dur_mod))) if t > 1 else 1.0
 
                 # Bio-Accumulation (b_raw & cumulative_bio)
                 # If hydro > 150 (SHS shield: Cassie-Baxter), growth is cut by 90%
                 bio_shield = 0.1 if (h_raw * (max(0.88, 1 - (t / 4000)))) > 150 else 0.8
                 daily_risk = bio_shield * bio_med * (1 + (temperature / 40)) * 0.05   # bio_mod makes PDMS (0.4) much cleaner than Epoxy (1.2)
-                cumulative_bio += daily_risk 
+                cumulative_bio += daily_risk
+                total_bio = min(1.0, cumulative_bio)
                 b_raw = 0.05   # This represents the base biological growth rate  
-                hydro = np.clip(h_raw * wear_factor, 0, 165.0) 
+                hydro = np.clip(h_raw * wear_factor, 0, 165.0)
+                durability = max(0, dur_raw) # Maps dur_raw to the metric
                 
                 # Extract drag from raw_pred based on your model output
                 d_raw = raw_pred if np.isscalar(raw_pred) else raw_pred[0]
                 drag_red = np.clip((d_raw + (hydro/20)) * drag_mod * slip_mod, 0, 95)  # Combines structural boost (drag_mod) with molecular slip (slip_mod) 
-                
-                total_bio = min(1.0, cumulative_bio)
-                durability = max(0, dur_raw) # Maps your updated dur_raw to the metric
-
                 st.session_state.pred = [drag_red, total_bio, hydro, durability]
 
                 with results_card.container():
@@ -322,11 +320,11 @@ st.info(
 )
 
 st.success(f"""
-- Ultimate Design Configuration: For maximum efficiency at **{velocity} knots**, the benchmark setup is:
-    - Base Material: CFRP (Carbon Fiber Selected) — Provides high stiffness to maintain ridge geometry.
-    - Surface Coating: PDMS (Silicone) — Lowest surface energy for non-stick performance.
-    - Geometry: 0.10mm Height / 0.15mm Spacing — Optimal Shark-skin V-groove ratio.
-    - Nano-Texture: 200nm Lotus Features — Maximizes air-layer stability (Plastron).
+- Major Design Considerations: For maximum efficiency at **{velocity} knots**, the benchmark setup is:
+    - Base Material:      CFRP (Carbon Fiber Selected) — Provides high stiffness to maintain ridge geometry.
+    - Surface Coating:    PDMS (Silicone) — Lowest surface energy for non-stick performance.
+    - Geometry:      0.10mm Height / 0.15mm Spacing — Optimal Shark-skin V-groove ratio.
+    - Nano-Texture:   200nm Lotus Features — Maximizes air-layer stability (Plastron).
 """)
 
 st.markdown("""
