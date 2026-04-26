@@ -276,11 +276,18 @@ st.info(
 )
 
 st.markdown("""
-**Core Mechanisms**
+**Core Design Strategy**
 
-- **Riblets:** Reduce turbulent drag by structuring boundary layer flow.
-- **Lotus Effect:** Nano-scale roughness reduces liquid-solid contact, limiting adhesion.
-- **Hybrid Design:** Simultaneously improves hydrodynamic efficiency and antifouling resistance.
+- **1. Riblets Flow Control:** 
+- Aligns with flow direction to suppress turbulent vortices  
+- Reduces skin-friction drag at the boundary layer
+
+**2. Lotus-Inspired Nano Texture**
+- Creates high contact angle (>150°) surfaces  
+- Minimizes liquid-solid contact area  
+- Prevents initial microbial adhesion  
+
+- **3. Hybrid Design:** Simultaneously improves hydrodynamic efficiency and antifouling resistance.
 
 **Surface Physics Insight**
 
@@ -288,17 +295,23 @@ st.markdown("""
 - Riblet spacing is tuned to maintain **pressure stability under flow conditions**.
 - Nano-textures reduce effective attachment area for microbial colonization.
 
-**Biofouling Defense Strategy**
+**Biofouling Resistance Strategy**
 
 - Disrupts early-stage fouling:
   - Conditioning film formation  
   - Bacterial adhesion  
   - Microorganism settlement  
-- Reduces transition to macrofouling (e.g., barnacles)
+- Reduces transition to macrofouling (such as barnacles)
+
+- Cassie–Baxter State (Plastron Formation): Air pockets form a protective barrier against microorganisms
+
+- Projected Hydrodynamic Stability at High Velocity:
+  - Optimized riblet spacing (~0.15 mm) maintains plastron integrity  
+  - Prevents air layer collapse under dynamic flow conditions  
 
 **Engineering Outcome**
 
-- Lower drag → improved fuel efficiency  
-- Reduced fouling → lower maintenance cost  
-- Predictive modeling → time-dependent performance estimation
+- Lower drag: Improved fuel efficiency  
+- Limit conditioning film formation: Reduced fouling lowers maintenance cost  
+- Predictive modeling: time-dependent performance estimation
 """)
