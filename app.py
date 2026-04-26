@@ -165,7 +165,7 @@ if st.button("Run Simulation"):
                 # Bio-Accumulation (b_raw & cumulative_bio)
                 # If hydro > 150 (SHS shield: Cassie-Baxter), growth is cut by 90%
                 bio_shield = 0.1 if (h_raw * (max(0.88, 1 - (t / 4000)))) > 150 else 0.8
-                daily_risk = bio_shield * bio_med * (1 + (temperature / 40)) * 0.05   # bio_mod makes PDMS (0.4) much cleaner than Epoxy (1.2)
+                daily_risk = bio_shield * bio_mod * (1 + (temperature / 40)) * 0.05   # bio_mod makes PDMS (0.4) much cleaner than Epoxy (1.2)
                 cumulative_bio += daily_risk
                 total_bio = min(1.0, cumulative_bio)
                 b_raw = 0.05   # This represents the base biological growth rate  
