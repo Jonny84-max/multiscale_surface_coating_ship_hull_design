@@ -154,7 +154,7 @@ if st.button("Run Simulation"):
         except Exception as e:
             st.error(f"Prediction Error: {e}")
 
-# ================= VISUALS =================
+# ================= 3D VISUALS =================
 res = 100
 x = np.linspace(0, 5, res)
 y = np.linspace(0, 5, res)
@@ -236,8 +236,6 @@ with c3:
 
     st.pyplot(fig3)
 
-
-
 with c4:
     labels = ["Smooth (Base)", "Riblet Only", "Lotus Only", "Hybrid Design"]
 
@@ -256,6 +254,8 @@ with c4:
         ax_comp.text(bar.get_x() + bar.get_width()/2, yval + 1, f'{yval:.1f}%', ha='center', va='bottom')
 
     st.pyplot(fig_comp)
+    if "pred" not in st.session_state:
+    st.info("👉 To view Hybrid Design performance, please run the simulation.")
     
 # ================= INSIGHT =================
 st.subheader("Engineering Interpretation")
