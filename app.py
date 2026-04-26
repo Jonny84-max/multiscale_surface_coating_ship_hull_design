@@ -175,13 +175,13 @@ Z_textured = base_thickness + hull_base + riblet + lotus
 
 # We ensure the bottom of the plate is perfectly flat at Z = base_thickness
 # This creates a "floor" that the texture sits on.
-Z_solid = np.maximum(Z_textured, base_thickness)
+Z = np.maximum(Z_textured, base_thickness)
 
 st.subheader("3D Solid Biomimetic Hull (Smooth Underside)")
 
 # 3. Plotting as a single cohesive unit
 fig = go.Figure(data=[go.Surface(
-    z=Z_solid, 
+    z=z, 
     colorscale='Viridis',
     contours_z=dict(show=True, usecolormap=True, highlightcolor="limegreen", project_z=True)
 )])
@@ -199,10 +199,10 @@ fig.update_layout(
 st.plotly_chart(fig, width='stretch')
 
 # Flow & Bio Analysis
+
 dZdx, dZdy = np.gradient(Z)
 U, V = 1 - np.abs(dZdx) * 2, -dZdy * 0.5
 v_field = np.sqrt(U**2 + V**2)
-
 col1, col2 = st.columns(2)
 with col1:
     st.write("**Flow Interaction Field**")
