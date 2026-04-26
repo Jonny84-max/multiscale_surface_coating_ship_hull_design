@@ -7,11 +7,7 @@ import plotly.graph_objects as go
 import time as time_lib
 from surface_3d_pattern import generate_stl
 
-st.cache_resource.clear()
-st.cache_data.clear()
-
 # ================= LOAD MODEL =================
-@st.cache_resource
 def load_model():
     try:
         data = joblib.load("shs_predictive_model.pkl")
