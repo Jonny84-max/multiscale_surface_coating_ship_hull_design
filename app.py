@@ -35,12 +35,12 @@ st.sidebar.header("Base Material Selection")
 material = st.sidebar.selectbox(
     "Foundation Material", 
     list(material_map.keys()), 
-    help="CFRP is most effective for maintaining sharp V-groove vertices."
+    help="CFRP is Considered most effective for maintaining sharp V-groove vertices in this design."
 )
 coating = st.sidebar.selectbox(
     "Surface Coating", 
     list(coating_map.keys()), 
-    help="PDMS (Silicone) is the most effective Foul-Release coating."
+    help="PDMS (Silicone) is considered most effective for Foul-Release coating in this design."
 )
 st.sidebar.header("Surface Geometry (Biofouling resistance)")
 
@@ -138,7 +138,7 @@ if st.button("Run Simulation"):
                     dur_mod = 1.2    # Faster wear
                     drag_mod = 1.0
 
-                # COATING MODIFIERS (Surface Energy)
+                # Coating Modifiers (Surface Energy)
                 if coating == "PDMS":
                     bio_mod, slip_mod = 0.3, 1.02
                 elif coating == "Fluoro":
