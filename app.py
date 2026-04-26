@@ -160,30 +160,39 @@ x = np.linspace(0, 5, res)
 y = np.linspace(0, 5, res)
 Xg, Yg = np.meshgrid(x, y)
 
-# 1. Texture Layer (Top)
+# 1. Texture Generation
 hull_base = np.clip(1 - (Yg**2) / (1.5**2), 0, 1)
-riblets = riblet_height * np.sin((2 * np.pi / riblet_spacing) * Xg)
+riblet = riblet_height * np.sin((2 * np.pi / riblet_spacing) * Xg)
 lotus = (0.08 * lotus_intensity) * (np.cos(45 * Xg) * np.cos(45 * Yg))
 
-# This is the "Face" with all your 160° potential
-Z_top = 0.5 + hull_base + riblets + lotus 
+# 2. Solid Block Logic
+# We define a base thickness (e.g., 0.2 mm)
+base_thickness = 0.2 
 
-# 2. Smooth Underside Layer
-# We create a second surface at a constant Z=0 to represent the hull interior
-Z_bottom = np.zeros_like(Z_top) 
+# The 'Top' includes the base + textures
+# The 'Bottom' is the base_thickness itself, ensuring no texture "pokes through"
+Z_textured = base_thickness + hull_base + riblet + lotus
 
-st.subheader("3D Biomimetic Hull Surface (Texture Top / Smooth Bottom)")
+# We ensure the bottom of the plate is perfectly flat at Z = base_thickness
+# This creates a "floor" that the texture sits on.
+Z_solid = np.maximum(Z_textured, base_thickness)
 
-# We plot the textured top, and the smooth base is implied by the Z=0 plane
-fig = go.Figure(data=[
-    # The Textured Surface
-    go.Surface(z=Z_top, colorscale='Viridis', name='Textured Hull'),
-    # The Smooth Underside
-    go.Surface(z=Z_bottom, colorscale='Greys', opacity=0.5, showscale=False, name='Smooth Base')
-])
+st.subheader("3D Solid Biomimetic Hull (Smooth Underside)")
+
+# 3. Plotting as a single cohesive unit
+fig = go.Figure(data=[go.Surface(
+    z=Z_solid, 
+    colorscale='Viridis',
+    contours_z=dict(show=True, usecolormap=True, highlightcolor="limegreen", project_z=True)
+)])
 
 fig.update_layout(
-    scene=dict(zaxis=dict(range=[0, 2])), # Keep the view focused on the plate
+    scene=dict(
+        zaxis=dict(range=[0, 2], title="Thickness (mm)"),
+        xaxis_title="Length",
+        yaxis_title="Width"
+    ),
+    margin=dict(l=0, r=0, b=0, t=0),
     width=1000, height=600
 )
 
