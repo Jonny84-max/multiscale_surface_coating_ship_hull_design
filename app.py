@@ -112,6 +112,27 @@ if st.button("Run Simulation"):
             for t in t_range:
                 X = build_input(velocity, t)
                 raw_pred = model.predict(X)[0]
+
+                # Material Performance Modifiers
+                if material == "CFRP":
+                    durability_mod = 0.85  # Slowest wear (stiff ridges)
+                    drag_mod = 1.05        # Slight boost to drag efficiency
+                elif material == "Hybrid":
+                    durability_mod = 0.92  # Good balance
+                    drag_mod = 1.10        # Best bio-shielding performance
+                else:  # GFRP
+                    durability_mod = 1.2    # Faster wear
+                    drag_mod = 1.0
+
+                # COATING MODIFIERS (Surface Energy)
+                if coating == "PDMS":
+                    bio_mod, slip_mod = 0.4, 1.08
+                elif coating == "Fluoro":
+                    bio_mod, slip_mod = 0.5, 1.12
+                elif coating == "Sol-gel":
+                    bio_mod, slip_mod = 0.7, 1.05
+                else: # Epoxy/Vinyl
+                    bio_mod, slip_mod = 1.2, 1.0
                 
                 # Contact Angle (h_raw)
                 # Logic: Base angle + Lotus impact - Velocity pressure penalty
