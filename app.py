@@ -196,8 +196,11 @@ if st.button("Run Simulation"):
                     c1.metric("Drag Reduc.", f"{drag_red:.1f}%")
                     c2.metric("Bio-Accum.", f"{total_bio:.2f}", delta=f"{daily_risk:.3f}")
                     c3.metric("Contact Angle", f"{hydro:.1f}°")
-                    c4.metric("Durability", f"{durability:.1f} pts")
-
+                    c4.metric(
+                        label="Durability",
+                        value=f"{durability:.1f} pts", 
+                        help="Surface Integrity Score (100=Pristine, 0=Failed). Higher velocity and time cause wear on the riblet peaks."
+                    )
                 progress_bar.progress(t / days_input)
 
                 if run_sim:
