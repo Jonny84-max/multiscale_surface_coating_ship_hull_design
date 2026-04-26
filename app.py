@@ -155,7 +155,7 @@ if st.button("Run Simulation"):
                 # Durability (dur_raw)
                 # Use dynamic decay. 
                 # Higher velocity causes the surface 'points' to drop faster over time.
-                wear_rate = (velocity * 0.05) + 0.01 * dur_mod  # dur_mod makes CFRP wear 0.85x slower than GFRP (1.2x)
+                wear_rate = ((velocity * 0.05) + 0.01) * dur_mod  # dur_mod makes CFRP wear 0.85x slower than GFRP (1.2x)
                 dur_raw = max(0, 100 - (t * wear_rate)) 
                 
                 # Mapping and clipping logic
