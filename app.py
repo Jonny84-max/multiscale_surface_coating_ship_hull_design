@@ -258,14 +258,61 @@ with c4:
     if "pred" not in st.session_state:
         st.info("👉 To view Hybrid Design performance, please run the simulation.")
     
-# ================= INSIGHT =================
-st.subheader("Engineering Interpretation")
-st.info(f"Design targeted for {velocity} knots. Organism size consideration: Bacteria (~1μm), Algae (~100μm).")
+# ================= ENGINEERING INSIGHT =================
+st.subheader("Engineering Insight")
+
+st.info(
+    f"""
+    **Operating Condition:** Designed for ~{velocity} knots  
+
+    **Target Fouling Scale:**  
+    - Bacteria (~1 μm)  
+    - Algae & Micro-organisms (~100 μm)  
+
+    This system integrates flow control (riblets) and surface chemistry (lotus-inspired nano-textures) 
+    to simultaneously reduce drag and delay biofouling.
+    """
+)
+
+# ================= DETAILED EXPLANATION =================
+if st.button("Show Design Mechanism"):
+    st.write("""
+    ### Core Design Strategy
+
+    **1. Riblet Flow Control**
+    - Aligns with flow direction to suppress turbulent vortices  
+    - Reduces skin-friction drag at the boundary layer  
+
+    **2. Lotus-Inspired Nano Texture**
+    - Creates high contact angle (>150°) surfaces  
+    - Minimizes liquid-solid contact area  
+    - Prevents initial microbial adhesion  
+
+    **3. Hybrid Effect**
+    - Riblets → immediate drag reduction (short-term performance)  
+    - Nano-texture → delayed fouling (long-term efficiency)  
+    """)
+
+# ================= BIOFOULING DEFENSE =================
 if st.button("Show Bio-Defense Analysis"):
     st.write("""
-    - **150°+ Angle:** Creates a Cassie-Baxter air layer (Plastron) that acts as a physical barrier against microscopic settlers.
-    - **High Velocity (20 kts):** The tight riblet spacing (0.15mm) ensures the Laplace pressure is higher than the dynamic flow pressure, preventing air layer collapse.
-    - **Bio-Discouragement:** Sub-micron nano-peaks from Lotus intensity reduce the available contact area for bacterial 'scent' proteins to bond.
+    ### Biofouling Resistance Mechanism
+
+    **Cassie–Baxter State (Air Layer Formation)**
+    - Surface traps air pockets (plastron layer)  
+    - Acts as a physical barrier against microorganisms  
+
+    **Pressure Balance at High Speed (~20 knots)**
+    - Riblet spacing (~0.15 mm) maintains plastron stability  
+    - Prevents air layer collapse under hydrodynamic pressure  
+
+    **Adhesion Disruption**
+    - Sub-micron nano-peaks reduce effective bonding area  
+    - Weakens bacterial protein attachment and biofilm initiation  
+
+    **Result**
+    - Delays conditioning film formation  
+    - Slows transition to macrofouling (e.g., barnacles)
     """)
 
 # ================= STL =================
