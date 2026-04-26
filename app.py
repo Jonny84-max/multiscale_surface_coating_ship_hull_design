@@ -156,15 +156,31 @@ if st.button("Run Simulation"):
 
 # ================= VISUALS =================
 res = 100
-x = np.linspace(0, 5, res); y = np.linspace(0, 5, res)
+x = np.linspace(0, 5, res)
+y = np.linspace(0, 5, res)
 Xg, Yg = np.meshgrid(x, y)
-hull_base = np.clip(1 - (Yg**2) / (1.5**2), 0, 1)
-riblet = riblet_height * np.sin((2 * np.pi / riblet_spacing) * Xg)
-lotus = (0.08 * lotus_intensity) * (np.cos(45 * Xg) * np.cos(45 * Yg))
-Z = hull_base + riblet + lotus
 
-st.subheader("3D Biomimetic Hull Surface (Multiscale)")
+# 1. Create a Flat Base Layer (Bottom of the plate)
+base_thickness = 0.5  # Constant thickness for the smooth underside
+
+# 2. Generate the Top Surface Textures
+# Hull curvature base
+hull_curve = np.clip(1 - (Yg**2) / (1.5**2), 0, 1)
+
+# Riblet macro-texture
+riblet = riblet_height * np.sin((2 * np.pi / riblet_spacing) * Xg)
+
+# Lotus nano-texture (Randomized peaks for the 'Fakir' effect)
+lotus = (0.08 * lotus_intensity) * (np.cos(45 * Xg) * np.cos(45 * Yg))
+
+# 3. Combine only for the Top
+# Z_top is the textured side, while the implicit bottom is Z=0
+Z = base_thickness + hull_curve + riblet + lotus
+
+st.subheader("3D Biomimetic Hull Surface (Textured Top / Smooth Bottom)")
+# Using 'width=stretch' to comply with 2026 Streamlit standards
 st.plotly_chart(go.Figure(data=[go.Surface(z=Z, colorscale='Viridis')]), width='stretch')
+
 
 # Flow & Bio Analysis
 dZdx, dZdy = np.gradient(Z)
