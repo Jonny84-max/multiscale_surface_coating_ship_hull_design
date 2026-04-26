@@ -121,8 +121,8 @@ if st.button("Run Simulation"):
                 # Bio-Accumulation (b_raw & cumulative_bio)
                 # If hydro > 150 (SHS shield), growth is cut by 90%
                 bio_shield = 0.1 if (h_raw * (max(0.88, 1 - (t / 4000)))) > 150 else 0.8
-                # Boost the b_raw multiplier so the 0.00 updates visibly
-                b_raw = 0.5 * bio_shield * (1 + (temperature / 40))
+                daily_risk = 0.5 * bio_shield * (1 + (temperature / 40)) * 0.05
+                cumulative_bio += daily_risk 
                 
                 # Adding to cumulative total (scaled for visibility in Streamlit)
                 cumulative_bio += b_raw * 0.05 
@@ -154,7 +154,7 @@ if st.button("Run Simulation"):
                     c1.metric("Drag Reduc.", f"{drag_red:.1f}%")
                     c2.metric("Bio-Accum.", f"{total_bio:.2f}", delta=f"{daily_risk:.3f}")
                     c3.metric("Contact Angle", f"{hydro:.1f}°")
-                    c4.metric("Durability", f"{durability:.0f} pts")
+                    c4.metric("Durability", f"{durability:.0f} pts", help="Surface Integrity Score (100=Pristine, 0=Failed)"))
 
                 progress_bar.progress(t / days_input)
                 if run_sim: time_lib.sleep(speed)
