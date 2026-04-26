@@ -160,46 +160,26 @@ x = np.linspace(0, 5, res)
 y = np.linspace(0, 5, res)
 Xg, Yg = np.meshgrid(x, y)
 
-# 1. Texture Generation
+# 1. Texture logic
 hull_base = np.clip(1 - (Yg**2) / (1.5**2), 0, 1)
 riblet = riblet_height * np.sin((2 * np.pi / riblet_spacing) * Xg)
 lotus = (0.08 * lotus_intensity) * (np.cos(45 * Xg) * np.cos(45 * Yg))
 
-# 2. Solid Block Logic
-# We define a base thickness (e.g., 0.2 mm)
+# 2. Base Plate Logic
 base_thickness = 0.2 
 
-# The 'Top' includes the base + textures
-# The 'Bottom' is the base_thickness itself, ensuring no texture "pokes through"
-Z_textured = base_thickness + hull_base + riblet + lotus
+# We keep the name 'Z' exactly as it was before to prevent NameErrors
+Z = base_thickness + hull_base + riblet + lotus
 
-# We ensure the bottom of the plate is perfectly flat at Z = base_thickness
-# This creates a "floor" that the texture sits on.
-Z = np.maximum(Z_textured, base_thickness)
+# This "clamping" ensures the bottom is perfectly flat at the base_thickness level
+Z = np.maximum(Z, base_thickness)
 
-st.subheader("3D Solid Biomimetic Hull (Smooth Underside)")
+st.subheader("3D Biomimetic Hull Surface (Solid Plate)")
 
-# 3. Plotting as a single cohesive unit
-fig = go.Figure(data=[go.Surface(
-    z=z, 
-    colorscale='Viridis',
-    contours_z=dict(show=True, usecolormap=True, highlightcolor="limegreen", project_z=True)
-)])
-
-fig.update_layout(
-    scene=dict(
-        zaxis=dict(range=[0, 2], title="Thickness (mm)"),
-        xaxis_title="Length",
-        yaxis_title="Width"
-    ),
-    margin=dict(l=0, r=0, b=0, t=0),
-    width=1000, height=600
-)
-
-st.plotly_chart(fig, width='stretch')
+# Use 'width=stretch' for Streamlit 2026 compliance
+st.plotly_chart(go.Figure(data=[go.Surface(z=Z, colorscale='Viridis')]), width='stretch')
 
 # Flow & Bio Analysis
-
 dZdx, dZdy = np.gradient(Z)
 U, V = 1 - np.abs(dZdx) * 2, -dZdy * 0.5
 v_field = np.sqrt(U**2 + V**2)
