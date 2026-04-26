@@ -182,7 +182,7 @@ st.plotly_chart(go.Figure(data=[go.Surface(z=Z, colorscale='Viridis')]), width='
 # Flow & Bio Analysis
 dZdx, dZdy = np.gradient(Z)
 U, V = 1 - np.abs(dZdx) * 2, -dZdy * 0.5
-v_field = np.sqrt(U**2 + V**2)
+velocity_field = np.sqrt(U**2 + V**2)
 col1, col2 = st.columns(2)
 extent = [0, 5, 0, 5] # Defines the [xmin, xmax, ymin, ymax] for the charts
 with col1:
