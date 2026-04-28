@@ -23,6 +23,7 @@ def load_model():
         return None, None
 
 model, columns = load_model()
+feature_columns = joblib.load("feature_columns.pkl")
 
 # ================= MAPPINGS =================
 material_map = {"GFRP": 0, "CFRP": 1, "Hybrid": 2}
@@ -99,11 +100,9 @@ def build_input(v, t_val):
     }
 
     df = pd.DataFrame([full_data])
-
-    required_cols = columns if columns is not None else df.columns
-
-    return df.reindex(columns=required_cols, fill_value=0)
-
+	
+    return df.reindex(columns=feature_columns, fill_value=0)
+	
 # ================= MODEL EXECUTION =================
 if st.button("Run Simulation"):
 
