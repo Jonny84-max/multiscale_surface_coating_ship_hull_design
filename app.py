@@ -9,21 +9,17 @@ from surface_3d_pattern import generate_stl
 
 # ================= LOAD MODEL =================
 @st.cache_resource
-def load_model():
+def load_assets():
     try:
-        data = joblib.load("shs_predictive_model.pkl")
-
-        if isinstance(data, dict) and "model" in data:
-            return data["model"], data.get("columns", None)
-
-        return data, None
-
+        # Load the model and the feature list
+        model = joblib.load("shs_predictive_model.pkl")
+        feature_columns = joblib.load("feature_columns.pkl")
+        return model, feature_columns
     except Exception as e:
-        st.error(f"Model Load Error: {e}")
+        st.error(f"Asset Load Error: {e}")
         return None, None
 
-model, columns = load_model()
-feature_columns = joblib.load("feature_columns.pkl")
+model, feature_columns = load_assets()
 
 # ================= MAPPINGS =================
 material_map = {"GFRP": 0, "CFRP": 1, "Hybrid": 2}
@@ -73,13 +69,8 @@ if 'pred' not in st.session_state:
 
 # ================= DYNAMIC FEATURE ALIGNER =================
 def build_input(v, t_val):
-
-    asp = riblet_height / (riblet_spacing + 1e-6)
-    f = 1 / (1 + asp)
-
-    cos_theta = -1 + f * (np.cos(np.radians(110)) + 1)
-    ca = np.degrees(np.arccos(np.clip(cos_theta, -1, 1)))
-
+    # ... (your existing calculations for asp, f, cos_theta, ca) ...
+    
     full_data = {
         "riblet_height": riblet_height,
         "riblet_spacing": riblet_spacing,
@@ -100,8 +91,7 @@ def build_input(v, t_val):
     }
 
     df = pd.DataFrame([full_data])
-	
-    return df.reindex(columns=feature_columns, fill_value=0)
+    return df[feature_columns]   # This ensures the order and names match the model exactly
 	
 # ================= MODEL EXECUTION =================
 if st.button("Run Simulation"):
