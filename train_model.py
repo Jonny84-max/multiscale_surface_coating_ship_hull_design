@@ -73,7 +73,7 @@ feature_columns = [
 X = df[feature_columns]
 y = df["drag_reduction"]
 
-model = RandomForestRegressor(n_estimators=150, max_depth=15, random_state=35)
+model = RandomForestRegressor(n_estimators=130, max_depth=10, random_state=25)
 model.fit(X, y)
 
 # 4. SAVE ASSETS
