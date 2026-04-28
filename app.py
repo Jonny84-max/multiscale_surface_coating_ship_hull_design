@@ -268,22 +268,22 @@ st.subheader("Efficiency Analysis")
 c3, c4 = st.columns(2)
 
 with c3:
-    vels = np.linspace(0.5, 25.0, 20.0)
-    drags = []
+	vels = np.linspace(0.5, 25.0, 20)
+	drags = []
 
-    for v in vels:
-        try:
-            X_v = build_input(v, days_input)
-            p = model.predict(X_v)[0]
-            drags.append(max(p[0] if not np.isscalar(p) else p, 0))
-        except:
-            drags.append(0)
+	for v in vels:
+		try:
+			X_v = build_input(v, days_input)
+			p = model.predict(X_v)[0]
+			drags.append(max(p[0] if not np.isscalar(p) else p, 0))
+		except:
+			drags.append(0)
 
-    fig3, ax3 = plt.subplots()
-    ax3.plot(vels, drags, 'r--o')
+	fig3, ax3 = plt.subplots()
+	ax3.plot(vels, drags, 'r--o')
 	ax3.set_xlabel("Velocity (knots)")
 	ax3.set_ylabel("Drag Reduction (%)")
-    st.pyplot(fig3)
+	st.pyplot(fig3)
 
 with c4:
     st.write("Efficiency Analysis")
