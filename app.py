@@ -55,9 +55,9 @@ lotus_intensity = np.clip(1.0 - (lotus_nm - 100) / 900, 0.0, 1.0)
 
 st.sidebar.header("Operational Conditions")
 
-velocity = st.sidebar.slider("Velocity (knots)", 0.5, 25.0, 20.0)
-temperature = st.sidebar.slider("Temperature (°C)", 0, 40, 20)
-salinity = st.sidebar.slider("Salinity (PSU)", 10, 40, 35)
+velocity = st.sidebar.slider("Velocity (knots)", 0.0, 25.0, 12.0)
+temperature = st.sidebar.slider("Temperature (°C)", 2.0, 35, 20)
+salinity = st.sidebar.slider("Salinity (PSU)", 15, 40, 35)
 days_input = st.sidebar.slider("Time (days)", 1, 1095, 30)
 asp = riblet_height / (riblet_spacing + 1e-6)
 f = 1 / (1 + asp)
