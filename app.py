@@ -211,10 +211,15 @@ Z = np.maximum(Z, base_thickness)
 st.subheader("3D Biomimetic Hull Surface (Solid Plate)")
 
 st.plotly_chart(
-    go.Figure(data=[go.Surface(z=Z, colorscale='Viridis')]),
+    go.Figure(data=[go.Surface(z=Z, colorscale='Viridis')]).update_layout(
+        scene=dict(
+            xaxis_title="Length (mm)",
+            yaxis_title="Width (mm)",
+            zaxis_title="Height (mm)"
+        )
+    ),
     use_container_width=True
 )
-
 # ================= STL =================
 if st.button("Generate STL for Export"):
     try:
@@ -243,15 +248,19 @@ with col1:
     st.write("Flow Field")
     fig_flow, ax_flow = plt.subplots()
     cf = ax_flow.contourf(Xg, Yg, velocity_field, levels=30, cmap='RdYlBu_r', extent=extent)
-    plt.colorbar(cf, ax=ax_flow)
+    ax_flow.set_xlabel("X-Axis (mm)")    # Add labels
+    ax_flow.set_ylabel("Y-Axis (mm)")
+    plt.colorbar(cf, ax=ax_flow, label="Velocity Intensity")
     st.pyplot(fig_flow)
-
+	
 with col2:
     st.write("Biofouling Risk Zones")
     attachment_zone = (velocity_field < np.percentile(velocity_field, 35))
     fig_bio, ax_bio = plt.subplots()
     ax_bio.imshow(attachment_zone, cmap='Reds', extent=extent, origin='lower')
-    st.pyplot(fig_bio)
+	ax_bio.set_xlabel("X-Axis (mm)")
+    ax_bio.set_ylabel("Y-Axis (mm)")
+	st.pyplot(fig_bio)
 
 # ================= COMPARISON =================
 st.subheader("Efficiency Analysis")
@@ -259,7 +268,7 @@ st.subheader("Efficiency Analysis")
 c3, c4 = st.columns(2)
 
 with c3:
-    vels = np.linspace(0.5, 25.0, 20)
+    vels = np.linspace(0.5, 25.0, 20.0)
     drags = []
 
     for v in vels:
@@ -272,6 +281,8 @@ with c3:
 
     fig3, ax3 = plt.subplots()
     ax3.plot(vels, drags, 'r--o')
+	ax3.set_xlabel("Velocity (knots)")
+	ax3.set_ylabel("Drag Reduction (%)")
     st.pyplot(fig3)
 
 with c4:
