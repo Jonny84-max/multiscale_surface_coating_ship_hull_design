@@ -99,11 +99,8 @@ def build_input(v, t_val):
 
     df = pd.DataFrame([full_data])
 	
-	required_cols = columns
-	final_df = pd.DataFrame([full_data])[required_cols]
-	return final_df
-
-    return df
+	required_cols = columns if columns is not None else df.columns
+	return df.reindex(columns=required_cols, fill_value=0)
 
 # ================= MODEL EXECUTION =================
 if st.button("Run Simulation"):
@@ -288,7 +285,7 @@ with c3:
 with c4:
     labels = ["Smooth (Base)", "Riblet Only", "Lotus Only", "Hybrid Design"]
 
-    current_drag = st.session_state.pred["drag"]
+    current_drag = st.session_state.pred["drag", 0] if st.session_state.pred else 0
     values = [0, 8.5, 5.2, current_drag]
 
     fig_comp, ax_comp = plt.subplots()
