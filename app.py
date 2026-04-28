@@ -276,11 +276,13 @@ with c3:
 
 with c4:
     labels = ["Smooth (Base)", "Riblet Only", "Lotus Only", "Hybrid Design"]
-
-    current_drag = st.session_state.pred["drag", 0] if st.session_state.pred else 0
-    values = [0, 8.5, 5.2, current_drag]
-
-    fig_comp, ax_comp = plt.subplots()
+    if st.session_state.pred is not None:         # Safely get current drag from the last simulation run
+        current_drag = st.session_state.pred.get("drag", 0.0)   # Check if "drag" is a key in the dictionary
+    else:
+        current_drag = 0.0
+    values = [0.0, 8.5, 5.2, current_drag]
+    
+	fig_comp, ax_comp = plt.subplots()
     bars = ax_comp.bar(labels, values)
 
     ax_comp.set_ylabel("Drag Reduction (%)")
