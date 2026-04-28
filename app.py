@@ -275,27 +275,31 @@ with c3:
     st.pyplot(fig3)
 
 with c4:
+    st.write("Efficiency Analysis")
     labels = ["Smooth (Base)", "Riblet Only", "Lotus Only", "Hybrid Design"]
-    if st.session_state.pred is not None:         # Safely get current drag from the last simulation run
-        current_drag = st.session_state.pred.get("drag", 0.0)   # Check if "drag" is a key in the dictionary
+
+    # Safely get current drag
+    if st.session_state.get("pred") is not None:
+        current_drag = st.session_state.pred.get("drag", 0.0)
     else:
         current_drag = 0.0
+
     values = [0.0, 8.5, 5.2, current_drag]
-    
-	fig_comp, ax_comp = plt.subplots()
-    bars = ax_comp.bar(labels, values)
+
+    # Create figure
+    fig_comp, ax_comp = plt.subplots()
+    bars = ax_comp.bar(labels, values, color=['gray', 'blue', 'green', 'gold'])
 
     ax_comp.set_ylabel("Drag Reduction (%)")
     ax_comp.set_title("Performance vs. Standard Smooth Hull")
-    ax_comp.set_ylim(0, 100)
+    ax_comp.set_ylim(0, 30)
 
     for bar in bars:
         yval = bar.get_height()
-        ax_comp.text(bar.get_x() + bar.get_width()/2, yval + 1,
+        ax_comp.text(bar.get_x() + bar.get_width()/2, yval + 0.5,
                       f'{yval:.1f}%', ha='center', va='bottom')
 
     st.pyplot(fig_comp)
-
     if "pred" not in st.session_state:
         st.info("👉 To view Hybrid Design performance, please run the simulation.")
 
