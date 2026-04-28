@@ -1,31 +1,67 @@
 import pandas as pd
 import numpy as np
 import joblib
-from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 
-# 1. LOAD & CLEAN
-df = pd.read_csv("biomimetic_simml_dataset.csv")
-def rescale(s, mi, ma): return (s - s.min()) / (s.max() - s.min() + 1e-9) * (ma - mi) + mi
+# 1. SETUP PARAMETERS
+n_samples = 5000
+np.random.seed(42)
 
-# 2. APPLY YOUR DESIGN SPECIFICATIONS
-df["velocity"] = rescale(df["velocity"], 0, 25)
-df["riblet_height"] = rescale(df["riblet_height"], 0.01, 0.3)
-df["riblet_spacing"] = rescale(df["riblet_spacing"], 0.05, 1.0)
-df["lotus_intensity"] = rescale(df["lotus_intensity"], 0.1, 0.9) # 0.9 = 100nm, 0.1 = 1000nm
-df["durability"] = rescale(df["durability"].abs(), 30, 98)
-df["drag_reduction"] = rescale(df["drag_reduction"], 0, 22)
+# --- Generate Input Ranges (Aligned with your Design) ---
+velocity = np.random.uniform(0, 25, n_samples)
+temp = np.random.uniform(2, 35, n_samples)
+salinity = np.random.uniform(15, 40, n_samples)
+time_days = np.random.uniform(1, 1095, n_samples)
+riblet_h = np.random.uniform(0.01, 0.3, n_samples)
+riblet_s = np.random.uniform(0.05, 1.0, n_samples)
+lotus_intensity = np.random.uniform(0.1, 0.9, n_samples) # 0.9=100nm, 0.1=1000nm
+material = np.random.randint(0, 3, n_samples)
+coating = np.random.randint(0, 5, n_samples)
 
-# 3. PHYSICS ENGINEERING
-df["aspect_ratio"] = df["riblet_height"] / (df["riblet_spacing"] + 1e-6)
-df["solid_fraction_f"] = 1 / (1 + df["aspect_ratio"])
-df["multiscale_index"] = df["lotus_intensity"] * (1 - (df["riblet_height"] * 0.1))
-df["velocity_riblet_interact"] = df["velocity"] * df["aspect_ratio"]
-df["cos_theta_eff"] = -1 + df["solid_fraction_f"] * (np.cos(np.radians(110)) + 1)
-df["effective_contact_angle"] = np.degrees(np.arccos(np.clip(df["cos_theta_eff"], -1, 1)))
-df["estimated_slip_length"] = (1 / (np.sqrt(df["solid_fraction_f"]) + 1e-6)) * df["riblet_spacing"]
+# --- Physics Calculations ---
+aspect_ratio = riblet_h / (riblet_s + 1e-6)
+solid_fraction_f = 1 / (1 + aspect_ratio)
 
-# 4. TRAIN & SAVE
+# Cassie-Baxter Contact Angle
+cos_theta_eff = -1 + solid_fraction_f * (np.cos(np.radians(110)) + 1)
+eff_contact_angle = np.degrees(np.arccos(np.clip(cos_theta_eff, -1, 1)))
+
+# Secondary features
+multiscale_idx = lotus_intensity * (1 - (riblet_h * 0.1))
+velocity_interact = velocity * aspect_ratio
+slip_length = (1 / (np.sqrt(solid_fraction_f) + 1e-6)) * riblet_s
+
+# --- Target Calculation (Drag Reduction %) ---
+# Base physics: Riblets (max ~10%) + SHS/Lotus (max ~12%)
+dr_riblet = 8 * np.sin(np.clip(aspect_ratio, 0, 1) * np.pi/2)
+dr_shs = 12 * (eff_contact_angle - 90) / 90
+if_shs_bonus = np.where(eff_contact_angle > 150, 1.2, 1.0) # Bonus for SHS state
+
+# Environmental modifiers
+temp_factor = 1 + (temp - 20) / 200
+salinity_factor = 1 - (salinity - 35) / 500
+
+# Degradation modifier
+wear_rate = (velocity * 0.05 + 0.1) / 100
+durability = np.clip(100 - (time_days * wear_rate), 0, 100)
+time_factor = 0.6 + 0.4 * (durability / 100)
+
+# Final Formula
+drag_reduction = (dr_riblet + (dr_shs * if_shs_bonus)) * temp_factor * salinity_factor * time_factor
+drag_reduction = np.clip(drag_reduction, 0, 25) # Cap at physical limit
+
+# 2. CREATE DATASET
+df = pd.DataFrame({
+    "riblet_height": riblet_h, "riblet_spacing": riblet_s, "lotus_intensity": lotus_intensity,
+    "velocity": velocity, "temperature": temp, "salinity": salinity, "time": time_days,
+    "material": material, "coating": coating, "aspect_ratio": aspect_ratio,
+    "multiscale_index": multiscale_idx, "velocity_riblet_interact": velocity_interact,
+    "solid_fraction_f": solid_fraction_f, "cos_theta_eff": cos_theta_eff,
+    "effective_contact_angle": eff_contact_angle, "estimated_slip_length": slip_length,
+    "durability": durability, "drag_reduction": drag_reduction
+})
+
+# 3. DEFINE FEATURES & TRAIN
 feature_columns = [
     "riblet_height", "riblet_spacing", "lotus_intensity", "velocity",
     "temperature", "salinity", "time", "material", "coating",
@@ -34,12 +70,15 @@ feature_columns = [
     "estimated_slip_length"
 ]
 
-X = df[feature_columns].fillna(0)
-y = df["drag_reduction"].fillna(0)
+X = df[feature_columns]
+y = df["drag_reduction"]
 
-model = RandomForestRegressor(n_estimators=145, max_depth=15, random_state=30)
+model = RandomForestRegressor(n_estimators=150, max_depth=15, random_state=35)
 model.fit(X, y)
 
+# 4. SAVE ASSETS
 joblib.dump(model, "shs_predictive_model.pkl")
 joblib.dump(feature_columns, "feature_columns.pkl")
-df.to_csv("biomimetic_simml_dataset.csv", index=False)
+df.to_csv("biomimetic_opsimml_dataset.csv", index=False)
+
+print("Training Complete. Model is now optimized for Temp, Salinity, and SHS Physics.")
