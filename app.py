@@ -258,10 +258,10 @@ with col2:
     attachment_zone = (velocity_field < np.percentile(velocity_field, 35))
     fig_bio, ax_bio = plt.subplots()
     ax_bio.imshow(attachment_zone, cmap='Reds', extent=extent, origin='lower')
-	ax_bio.set_xlabel("X-Axis (mm)")
-    ax_bio.set_ylabel("Y-Axis (mm)")
-	st.pyplot(fig_bio)
-
+    ax_bio.set_xlabel("X (mm)")
+    ax_bio.set_ylabel("Y (mm)")
+    
+    st.pyplot(fig_bio)
 # ================= COMPARISON =================
 st.subheader("Efficiency Analysis")
 
