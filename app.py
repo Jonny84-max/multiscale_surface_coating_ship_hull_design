@@ -72,6 +72,7 @@ if 'pred' not in st.session_state:
 
 # ================= DYNAMIC FEATURE ALIGNER =================
 def build_input(v, t_val):
+
     asp = riblet_height / (riblet_spacing + 1e-6)
     f = 1 / (1 + asp)
 
@@ -98,10 +99,10 @@ def build_input(v, t_val):
     }
 
     df = pd.DataFrame([full_data])
-	
-	required_cols = columns if columns is not None else df.columns
 
-return df.reindex(columns=required_cols, fill_value=0)
+    required_cols = columns if columns is not None else df.columns
+
+    return df.reindex(columns=required_cols, fill_value=0)
 
 # ================= MODEL EXECUTION =================
 if st.button("Run Simulation"):
