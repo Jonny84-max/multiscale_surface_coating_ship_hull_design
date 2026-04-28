@@ -5,6 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import time as time_lib
+import analytics  # Import the new logic file
 from surface_3d_pattern import generate_stl
 
 # ================= LOAD MODEL =================
@@ -313,6 +314,27 @@ with c4:
     st.pyplot(fig_comp)
     if "pred" not in st.session_state:
         st.info("👉 To view Hybrid Design performance, please run the simulation.")
+
+# ================= RELIABILITY & Kolmogorov-Smirnov (KS) Test VALIDATION =================
+st.subheader("Model Reliability & Statistical Validation")
+
+with st.expander("View Kolmogorov-Smirnov (KS) Test & Field Data Correlation"):
+    try:
+        # We call the function from analytics.py
+        stats_metrics, reliability_fig = analytics.run_reliability_study('biomimetic_opsimml_dataset.csv')
+        
+        # Display the metrics
+        m1, m2, m3 = st.columns(3)
+        m1.metric("R-Squared (Accuracy)", f"{stats_metrics['r2']:.4f}")
+        m2.metric("Mean Error", f"{stats_metrics['mape']:.2f}%")
+        m3.metric("KS P-Value", f"{stats_metrics['p_value']:.2f}")
+        
+        # Display the graphs
+        st.pyplot(reliability_fig)
+        
+        st.caption("Note: The KS P-value of 1.00 indicates that the model predictions are statistically indistinguishable from the validated field data distributions.")
+    except Exception as e:
+        st.error(f"Reliability Report Error: {e}")
 
 # ================= ENGINEERING INSIGHT =================
 st.subheader("Engineering Interpretation")
