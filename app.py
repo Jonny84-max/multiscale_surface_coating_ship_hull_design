@@ -194,6 +194,7 @@ if st.button("Run Simulation"):
             st.error(f"Prediction Error: {e}")
 
 # ================= 3D VISUALS =================
+st.divider()
 res = 100
 x = np.linspace(0, 5, res)
 y = np.linspace(0, 5, res)
@@ -222,6 +223,7 @@ st.plotly_chart(
     use_container_width=True
 )
 # ================= STL =================
+st.divider()
 if st.button("Generate STL for Export"):
     try:
         _, _, _, path = generate_stl(
@@ -238,6 +240,7 @@ if st.button("Generate STL for Export"):
         st.error(f"STL Error: {e}")
 
 # ================= FLOW + BIO =================
+st.divider()
 dZdx, dZdy = np.gradient(Z)
 U, V = 1 - np.abs(dZdx) * 2, -dZdy * 0.5
 velocity_field = np.sqrt(U**2 + V**2)
@@ -264,6 +267,7 @@ with col2:
     
     st.pyplot(fig_bio)
 # ================= COMPARISON =================
+st.divider()
 st.subheader("Efficiency Analysis")
 
 c3, c4 = st.columns(2)
@@ -332,7 +336,7 @@ try:
     # 2. Show the reliability graphs immediately
     st.pyplot(reliability_fig)
     
-    st.info("**Scientific Validation:** The KS p-value of 1.00 confirms the model's predictive distribution is a 1:1 match for field observations.")
+    st.info("Scientific Validation: The KS p-value ($\approx 1.00$) confirms the model's predictive distribution is statistically indistinguishable from the validated field observations.")
 
 except Exception as e:
     st.error(f"Reliability Report Load Error: {e}")
