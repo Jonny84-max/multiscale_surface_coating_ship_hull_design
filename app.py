@@ -59,7 +59,10 @@ velocity = st.sidebar.slider("Velocity (knots)", 0.5, 25.0, 20.0)
 temperature = st.sidebar.slider("Temperature (°C)", 0, 40, 20)
 salinity = st.sidebar.slider("Salinity (PSU)", 10, 40, 35)
 days_input = st.sidebar.slider("Time (days)", 1, 1095, 30)
-
+asp = riblet_height / (riblet_spacing + 1e-6)
+f = 1 / (1 + asp)
+cos_theta = -1 + f * (np.cos(np.radians(110)) + 1)
+ca = np.degrees(np.arccos(np.clip(cos_theta, -1, 1)))
 mode = st.sidebar.selectbox("Output Mode", ["Visualization STL", "CFD STL"])
 run_sim = st.sidebar.checkbox("Run Time Simulation")
 speed = st.sidebar.slider("Simulation Speed", 0.1, 1.5, 0.4)
@@ -68,9 +71,7 @@ if 'pred' not in st.session_state:
     st.session_state.pred = None
 
 # ================= DYNAMIC FEATURE ALIGNER =================
-def build_input(v, t_val):
-    # ... (your existing calculations for asp, f, cos_theta, ca) ...
-    
+def build_input(v, t_val):           # This dictionary should match the feature_columns.pkl exactly
     full_data = {
         "riblet_height": riblet_height,
         "riblet_spacing": riblet_spacing,
@@ -81,9 +82,9 @@ def build_input(v, t_val):
         "time": t_val,
         "material": material_map[material],
         "coating": coating_map[coating],
-        "aspect_ratio": asp,
+        "aspect_ratio": asp, # Using the global 'asp' defined above
         "multiscale_index": lotus_intensity * (1 - (riblet_height * 0.1)),
-        "velocity_riblet_interact": v * asp,
+        "velocity_riblet_interact": v * asp, # 'v' is the input speed, 'asp' is global
         "solid_fraction_f": f,
         "cos_theta_eff": cos_theta,
         "effective_contact_angle": ca,
@@ -91,7 +92,7 @@ def build_input(v, t_val):
     }
 
     df = pd.DataFrame([full_data])
-    return df[feature_columns]   # This ensures the order and names match the model exactly
+    return df.reindex(columns=feature_columns, fill_value=0)   # Reindex ensures the columns are in the EXACT order the model was trained on
 	
 # ================= MODEL EXECUTION =================
 if st.button("Run Simulation"):
