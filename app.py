@@ -100,7 +100,8 @@ def build_input(v, t_val):
     df = pd.DataFrame([full_data])
 	
 	required_cols = columns if columns is not None else df.columns
-	return df.reindex(columns=required_cols, fill_value=0)
+
+return df.reindex(columns=required_cols, fill_value=0)
 
 # ================= MODEL EXECUTION =================
 if st.button("Run Simulation"):
