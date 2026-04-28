@@ -336,7 +336,7 @@ try:
     # 2. Show the reliability graphs immediately
     st.pyplot(reliability_fig)
     
-    st.info("Scientific Validation: The ("KS P-Value", "~ 1.00") confirms the model's predictive distribution is statistically indistinguishable from the validated field observations.")
+    st.info("Scientific Validation: The The KS P-Value ≈ 1.00 confirms the model's predictive distribution is statistically indistinguishable from the validated field observations.")
 
 except Exception as e:
     st.error(f"Reliability Report Load Error: {e}")
