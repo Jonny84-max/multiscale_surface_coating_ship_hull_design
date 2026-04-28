@@ -98,21 +98,10 @@ def build_input(v, t_val):
     }
 
     df = pd.DataFrame([full_data])
-
-    if model is not None:
-        if hasattr(model, 'feature_names_in_'):
-            required_cols = list(model.feature_names_in_)
-        elif columns is not None:
-            required_cols = columns
-        else:
-            required_cols = list(full_data.keys())
-
-        final_df = pd.DataFrame()
-
-        for col in required_cols:
-            final_df[col] = df[col] if col in df.columns else [0.0]
-
-        return final_df
+	
+	required_cols = columns
+	final_df = pd.DataFrame([full_data])[required_cols]
+	return final_df
 
     return df
 
@@ -172,14 +161,19 @@ if st.button("Run Simulation"):
                 hydro = np.clip(h_raw * wear_factor, 0, 165.0)
                 durability = max(0, dur_raw)
 
-                d_raw = raw_pred if np.isscalar(raw_pred) else raw_pred[0]
+                d_raw = raw_pred
 
                 drag_red = np.clip(
                     (d_raw + (hydro / 20)) * drag_mod * slip_mod,
                     0, 95
                 )
 
-                st.session_state.pred = [drag_red, total_bio, hydro, durability]
+                st.session_state.pred = {
+    			"drag": drag_red,
+    			"bio": total_bio,
+    			"hydro": hydro,
+    			"durability": durability
+		}
 
                 with results_card.container():
 
@@ -217,7 +211,7 @@ Xg, Yg = np.meshgrid(x, y)
 
 hull_base = np.clip(1 - (Yg**2) / (1.5**2), 0, 1)
 
-riblet = riblet_height * (1 - 2 * np.abs((Xg / riblet_spacing) % 1 - 0.5))
+riblet = riblet_height * (1 - 2 * np.abs((Xg / (riblet_spacing + 1e-6)) % 1 - 0.5))
 
 lotus = (0.04 * lotus_intensity) * (np.cos(45 * Xg) * np.cos(45 * Yg))
 
@@ -294,7 +288,7 @@ with c3:
 with c4:
     labels = ["Smooth (Base)", "Riblet Only", "Lotus Only", "Hybrid Design"]
 
-    current_drag = st.session_state.pred[0] if st.session_state.pred else 0
+    current_drag = st.session_state.pred["drag"]
     values = [0, 8.5, 5.2, current_drag]
 
     fig_comp, ax_comp = plt.subplots()
