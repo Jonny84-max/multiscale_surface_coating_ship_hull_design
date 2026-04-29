@@ -37,13 +37,13 @@ def run_reliability_study(csv_path):
         "p_value": ks_2samp(y_test, y_pred)[1]
     }
     
-    # Prepare the 3-panel figure
-    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+    # Prepare the 2-panel figure (Removed the 3rd panel)
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
 
     # Graph 1: Actual vs Predicted
     axes[0].scatter(y_test, y_pred, alpha=0.5, color='teal', s=10)
     axes[0].plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', lw=2)
-    axes[0].set_title(f'Actual vs Predicted\n($R^2 = {metrics["r2"]:.3f}$)')
+    axes[0].set_title(f'Model Accuracy Check\n($R^2 \\approx {metrics["r2"]:.3f}$)')
     axes[0].set_xlabel('Measured Field Data (%)')
     axes[0].set_ylabel('Model Prediction (%)')
     axes[0].grid(True, alpha=0.3)
@@ -53,10 +53,10 @@ def run_reliability_study(csv_path):
     y_pred_sorted = np.sort(y_pred)
     axes[1].plot(y_test_sorted, np.linspace(0, 1, len(y_test_sorted)), label='Field Data', color='blue', lw=2)
     axes[1].plot(y_pred_sorted, np.linspace(0, 1, len(y_pred_sorted)), label='Model', color='red', linestyle='--', lw=2)
-    axes[1].set_title(f'KS Test CDF\n(p-value = {metrics["p_value"]:.2f})')
+    axes[1].set_title(f'Distributional Similarity\n(KS Test p-value $\\approx$ {metrics["p_value"]:.2f})')
     axes[1].legend()
     axes[1].grid(True, alpha=0.3)
-    
+
     plt.tight_layout()
     
     return metrics, fig
