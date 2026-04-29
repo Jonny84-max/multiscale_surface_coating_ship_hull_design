@@ -195,7 +195,7 @@ if st.button("Run Simulation"):
 
 # ================= 3D VISUALS =================
 st.divider()
-res = 100
+res = 50
 x = np.linspace(0, 5, res)
 y = np.linspace(0, 5, res)
 Xg, Yg = np.meshgrid(x, y)
