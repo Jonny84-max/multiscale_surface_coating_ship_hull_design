@@ -56,11 +56,6 @@ def run_reliability_study(csv_path):
     axes[1].set_title(f'KS Test CDF\n(p-value = {metrics["p_value"]:.2f})')
     axes[1].legend()
     axes[1].grid(True, alpha=0.3)
-
-    # Graph 3: Feature Importance
-    importances = pd.Series(val_model.feature_importances_, index=features).sort_values(ascending=True)
-    importances.plot(kind='barh', color='skyblue', ax=axes[2])
-    axes[2].set_title('Multiscale Parameter Impact')
     
     plt.tight_layout()
     
