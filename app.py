@@ -107,12 +107,12 @@ if st.button("Run Simulation"):
             progress_bar = st.progress(0)
             cumulative_bio = 0
 
-            t_range = range(1, days_input + 1) if run_sim else [days_input]
+            t_range = range(1, int(days_input) + 1) if run_sim else [days_input]
 
             for t in t_range:
 
                 X = build_input(velocity, t)
-                raw_pred = model.predict(X)[0]
+                raw_pred = float(model.predict(X)[0])
 
                 # Material Performance
                 if material == "CFRP":
@@ -188,14 +188,15 @@ if st.button("Run Simulation"):
                 progress_bar.progress(t / days_input)
 
                 if run_sim:
-                    time_lib.sleep(speed)
+                    time_lib.sleep(speed * 0.2)
 
         except Exception as e:
             st.error(f"Prediction Error: {e}")
 
 # ================= 3D VISUALS =================
 st.divider()
-res = 120
+
+res = 100
 x = np.linspace(0, 5, res)
 y = np.linspace(0, 5, res)
 Xg, Yg = np.meshgrid(x, y)
